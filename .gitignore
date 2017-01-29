@@ -22,3 +22,6 @@ project/.sbtserver.lock
 .classpath
 .project
 .settings/
+
+# Intellij specific
+.idea/
