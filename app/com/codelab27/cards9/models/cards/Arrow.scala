@@ -20,7 +20,7 @@ sealed trait Arrow extends EnumEntry {
 }
 
 object Arrow extends Enum[Arrow] {
-  val values: List[Arrow] = findValues.toList
+  val values = findValues
 
   case object N extends Arrow { val hex: Byte = 0x80.toByte; val opposite: Arrow = S }
   case object NE extends Arrow { val hex: Byte = 0x40; val opposite: Arrow = SW }
@@ -62,7 +62,7 @@ object Arrow extends Enum[Arrow] {
    * @param packed a byte with packed arrows
    * @return a list with the arrows contained into the packed byte
    */
-  def extract(packed: Byte): List[Arrow] = values.filterNot(arrow => (arrow.hex & packed) == 0)
+  def extract(packed: Byte): List[Arrow] = values.toList.filterNot(arrow => (arrow.hex & packed) == 0)
 
   /**
    * Compresses a list of arrows into a packed byte.
