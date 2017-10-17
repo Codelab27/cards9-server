@@ -1,11 +1,13 @@
 package com.codelab27.cards9.models
 
 import com.codelab27.cards9.services.settings.GameSettings
-import boards.Board
+import boards.{Board, BoardSettings}
 import cards._
 import cards.BattleClass._
 import org.scalacheck.Gen
 import java.net.URL
+
+import com.codelab27.cards9.models.players.Player
 import org.scalacheck.Arbitrary
 
 object ModelGens {
@@ -16,7 +18,7 @@ object ModelGens {
     name <- Gen.alphaStr
     img <- Gen.alphaStr
   } yield {
-    CardClass(id, name, new URL(urlProtocol + img))
+    CardClass(CardClass.Id(id), CardClass.Name(name), new URL(urlProtocol + img))
   }
 
   private val BattleClassGenerator: Gen[BattleClass] = Gen.oneOf(Physical, Magical, Flexible, Assault)
@@ -38,7 +40,7 @@ object ModelGens {
     mdef <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
     arrows <- ArrowsGenerator
   } yield {
-    Card(id, ownerId, cardClassId, power, battleClass, pdef, mdef, arrows.toList)
+    Card(Card.Id(id), Player.Id(ownerId), CardClass.Id(cardClassId), power, battleClass, pdef, mdef, arrows.toList)
   }
 
   implicit def cards(implicit gameSettings: GameSettings): Arbitrary[Card] = Arbitrary(CardGenerator)
@@ -46,13 +48,15 @@ object ModelGens {
   private def HandGenerator(implicit gameSettings: GameSettings): Gen[Set[Card]] =
     Gen.containerOfN[Set, Card](gameSettings.MAX_HAND_CARDS, CardGenerator)
 
-  private def BoardGenerator(implicit gameSettings: GameSettings): Gen[Board] =
+  private def BoardGenerator(implicit boardSettings: BoardSettings, gameSettings: GameSettings): Gen[Board] =
     for {
       redHand <- HandGenerator
       blueHand <- HandGenerator
     } yield {
-      Board.random(redHand, blueHand)
+      Board.random(redHand, blueHand, boardSettings)
     }
 
-  implicit def boards(implicit gameSettings: GameSettings): Arbitrary[Board] = Arbitrary(BoardGenerator)
+  implicit def boards(implicit boardSettings: BoardSettings, gameSettings: GameSettings): Arbitrary[Board] = {
+    Arbitrary(BoardGenerator)
+  }
 }

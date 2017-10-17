@@ -1,9 +1,11 @@
 package com.codelab27.cards9.models.cards
 
+import com.codelab27.cards9.models.cards.BattleClass.{Assault, Flexible, Magical, Physical}
+import com.codelab27.cards9.models.players.Player
+
 import scala.util.Random
-import scala.math.{ max, min }
+import scala.math.{max, min}
 import enumeratum._
-import com.codelab27.cards9.game.GameTypes._
 import com.codelab27.cards9.services.settings.GameSettings
 
 /**
@@ -40,42 +42,49 @@ object BattleClass extends Enum[BattleClass] {
  * @param arrows list of atk/def arrows
  */
 case class Card(
-  id: CardId,
-  ownerId: PlayerId,
-  cardType: CardClassId,
+  id: Card.Id,
+  ownerId: Player.Id,
+  cardType: CardClass.Id,
   power: Int,
   bclass: BattleClass,
   pdef: Int,
   mdef: Int,
   arrows: List[Arrow])(implicit gameSettings: GameSettings) {
 
-  import BattleClass._
-
   require(power < gameSettings.CARD_MAX_LEVEL)
   require(pdef < gameSettings.CARD_MAX_LEVEL)
   require(mdef < gameSettings.CARD_MAX_LEVEL)
   require(arrows.distinct.size == arrows.size && arrows.size <= Arrow.MAX_ARROWS)
 
+}
+
+object Card {
+
+  case class Id(value: Int) extends AnyVal
+
   /**
-   * Challenge another card.
-   *
-   * @param other enemy card
-   * @param side location of the enemy card
-   *
-   * @return a fight result
-   */
-  def fight(other: Card, side: Arrow): Fight = {
+    * Challenge another card.
+    *
+    * @param attacker attacking card
+    * @param defender enemy card
+    * @param side location of the enemy card
+    *
+    * @return a fight result
+    */
+  def fight(attacker: Card, defender: Card, side: Arrow)(implicit gameSettings: GameSettings): Fight = {
+    import BattleClass._
+
     // We need an arrow pointing to the other card
-    require(arrows.contains(side))
+    require(attacker.arrows.contains(side))
 
     // Fight!!
-    if (other.arrows.contains(side.opposite)) {
-      val (atkStat, defStat) = bclass match {
-        case Physical => (power, other.pdef)
-        case Magical  => (power, other.mdef)
-        case Flexible => (power, min(other.pdef, other.mdef))
-        case Assault => (max(max(power, pdef), mdef),
-          min(min(other.power, other.pdef), other.mdef))
+    if (defender.arrows.contains(side.opposite)) {
+      val (atkStat, defStat) = attacker.bclass match {
+        case Physical => (attacker.power, defender.pdef)
+        case Magical  => (attacker.power, defender.mdef)
+        case Flexible => (attacker.power, min(defender.pdef, defender.mdef))
+        case Assault => (max(max(attacker.power, attacker.pdef), attacker.mdef),
+          min(min(defender.power, defender.pdef), defender.mdef))
       }
 
       lazy val (atkScore, defScore) = statVs(atkStat, defStat)
@@ -89,10 +98,11 @@ case class Card(
         (p1atk - Random.nextInt(p1atk + 1), p2def - Random.nextInt(p2def + 1))
       }
 
-      Fight(this.id, other.id, atkScore, defScore, atkScore > defScore)
+      Fight(attacker.id, defender.id, atkScore, defScore, atkScore > defScore)
     } else {
-      // Instant win 
-      Fight(this.id, other.id, 0, 0, true)
+      // Instant win
+      Fight(attacker.id, defender.id, 0, 0, true)
     }
   }
+
 }

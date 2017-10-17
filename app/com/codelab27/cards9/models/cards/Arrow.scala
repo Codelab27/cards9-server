@@ -1,6 +1,6 @@
 package com.codelab27.cards9.models.cards
 
-import com.codelab27.cards9.models.boards.Coordinate
+import com.codelab27.cards9.models.boards.{Coordinates, XAxis, YAxis}
 import enumeratum._
 
 /**
@@ -36,14 +36,15 @@ object Arrow extends Enum[Arrow] {
   /**
    * Get the coordinates of the arrow, given the center.
    *
-   * @param coords center of coordinates
    * @param arrow get coords for this arrow
-   * @return a tuple with the coordinates of the arrow
+   * @param coords center of coordinates
+   * @return the coordinates of the arrow
    */
-  def arrowCoords(coords: Coordinate, arrow: Arrow): Coordinate = {
-    val i = coords.i
-    val j = coords.j
-    val coordPair = arrow match {
+  def arrowCoords(arrow: Arrow, coords: Coordinates): Coordinates = {
+    val i = coords.x.value
+    val j = coords.y.value
+
+    val (newX, newY) = arrow match {
       case N  => (i - 1, j)
       case NE => (i - 1, j + 1)
       case E  => (i, j + 1)
@@ -53,7 +54,8 @@ object Arrow extends Enum[Arrow] {
       case W  => (i, j - 1)
       case NW => (i - 1, j - 1)
     }
-    Coordinate.tupled(coordPair)
+
+    Coordinates(XAxis(newX), YAxis(newY))
   }
 
   /**
@@ -70,15 +72,23 @@ object Arrow extends Enum[Arrow] {
    * @param arrows list of arrows
    * <b>Precondition:</b>
    * arrows must be a list of distinct arrows, with a max size of [[MAX_ARROWS]]
-   * @return a byte with the arrows compressed
+   * @return some byte with the arrows compressed when preconditions are true
    */
-  def compress(arrows: List[Arrow]): Byte = {
+  def compress(arrows: List[Arrow]): Option[Byte] = {
     // Do not repeat arrows and do not exceed max arrows of card
-    require(arrows.distinct.size == arrows.size)
-    require(arrows.size < MAX_ARROWS + 1)
+    val allArrowsAreDistinct = arrows.distinct.size == arrows.size
+    val correctNumberOfArrows = arrows.size < MAX_ARROWS + 1
 
-    // Card with no arrows...
-    if (arrows.isEmpty) 0x00
-    else arrows.foldLeft[Byte](0x00)((total, next) => (total | next.hex).toByte)
+    allArrowsAreDistinct && correctNumberOfArrows match {
+      case false  => None
+      case true   => {
+        val compressed: Byte = {
+          if (arrows.isEmpty) 0x00 // Card with no arrows...
+          else arrows.foldLeft[Byte](0x00)((total, next) => (total | next.hex).toByte)
+        }
+
+        Some(compressed)
+      }
+    }
   }
 }

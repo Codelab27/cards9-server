@@ -7,9 +7,12 @@ import com.codelab27.cards9.services.settings.GameSettings
 class BoardSpec extends ModelSpec {
 
   "A board" when {
+    val BOARD_SIZE = BoardSize(4)
+    val BOARD_MAX_BLOCKS = BoardMaxBlocks(6)
+
+    implicit val boardSettings: BoardSettings = BoardSettings(BOARD_SIZE, BOARD_MAX_BLOCKS)
+
     implicit val defaultGameSettings: GameSettings = new GameSettings {
-      override val BOARD_SIZE: Int = 4
-      override val BOARD_MAX_BLOCKS: Int = 6
       override val CARD_MAX_LEVEL: Int = 16
       override val MAX_HAND_CARDS: Int = 5
     }
@@ -17,7 +20,7 @@ class BoardSpec extends ModelSpec {
     "created" should {
       "have the size specified" in {
         forAll { board: Board =>
-          board.grid.length should be(defaultGameSettings.BOARD_SIZE)
+          board.grid.length shouldBe boardSettings.size.value
         }
       }
 
@@ -35,7 +38,7 @@ class BoardSpec extends ModelSpec {
             case _     => blocks
           }
 
-          numBlocks should be <= defaultGameSettings.BOARD_MAX_BLOCKS
+          numBlocks should be <= boardSettings.maxBlocks.value
         }
       }
     }

@@ -11,24 +11,24 @@ class ArrowSpec extends ModelSpec {
   "A packed arrows" when {
     "zero" should {
       "return empty list of arrows" in {
-        Arrow.extract(zeroByte) should be(Nil)
+        Arrow.extract(zeroByte) shouldBe Nil
       }
     }
 
     "all bits set to one" should {
       "return list of arrows of size MAX_ARROWS" in {
-        Arrow.extract(maxByte).size should be equals Arrow.MAX_ARROWS
+        Arrow.extract(maxByte).size shouldEqual Arrow.MAX_ARROWS
       }
 
       "return list of arrows composed of all arrows" in {
-        Arrow.extract(maxByte).toSet should be equals Arrow.values.toSet
+        Arrow.extract(maxByte).toSet shouldEqual Arrow.values.toSet
       }
     }
 
     "random bits are set to one" should {
       "compressed arrows should give the same packed byte" in {
         forAll { (packed: Byte) =>
-          Arrow.compress(Arrow.extract(packed)) should be(packed)
+          Arrow.compress(Arrow.extract(packed)) shouldBe Some(packed)
         }
       }
     }
@@ -37,17 +37,15 @@ class ArrowSpec extends ModelSpec {
   "A list of arrows" when {
     "empty" should {
       "return a zero compressed byte" in {
-        Arrow.compress(Nil) should be equals zeroByte
+        Arrow.compress(Nil) shouldEqual Some(zeroByte)
       }
     }
 
     "arrows are repeated and/or size is greater than MAX_ARROWS" should {
-      "throw an IllegalArgumentException" in {
+      "return no byte" in {
         forAll(InvalidArrowsGenerator) { arrows: List[Arrow] =>
           whenever(arrows.distinct.size != arrows.size || arrows.size > Arrow.MAX_ARROWS) {
-            intercept[IllegalArgumentException] {
-              Arrow.compress(arrows)
-            }
+            Arrow.compress(arrows) shouldEqual None
           }
         }
       }
@@ -56,7 +54,7 @@ class ArrowSpec extends ModelSpec {
     "valid random arrows are selected" should {
       "compress and extract the same list" in {
         forAll { arrows: List[Arrow] =>
-          Arrow.extract(Arrow.compress(arrows)).toSet should be(arrows.toSet)
+          Arrow.compress(arrows).map(Arrow.extract(_).toSet) shouldBe Some(arrows.toSet)
         }
       }
     }

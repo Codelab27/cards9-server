@@ -1,7 +1,6 @@
 package com.codelab27.cards9.models.cards
 
 import org.joda.time.DateTime
-import com.codelab27.cards9.game.GameTypes._
 
 /**
  * Result of a card fight.
@@ -13,9 +12,13 @@ import com.codelab27.cards9.game.GameTypes._
  * @param atkWinner true if attacker was the winner of the fight
  */
 case class Fight(
-  attacker: CardId,
-  defender: CardId,
+  attacker: Card.Id,
+  defender: Card.Id,
   atkPoints: Int,
   defPoints: Int,
   atkWinner: Boolean,
   dateTime: DateTime = DateTime.now)
+
+object Fight {
+  case class Id(value: String) extends AnyVal
+}

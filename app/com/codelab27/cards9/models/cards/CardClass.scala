@@ -1,7 +1,6 @@
 package com.codelab27.cards9.models.cards
 
 import java.net.URL
-import com.codelab27.cards9.game.GameTypes._
 
 /**
  * Card class.
@@ -11,6 +10,12 @@ import com.codelab27.cards9.game.GameTypes._
  * @param img url of the image for this card
  */
 case class CardClass(
-  id: CardClassId,
-  name: String,
+  id: CardClass.Id,
+  name: CardClass.Name,
   img: URL)
+
+object CardClass {
+  case class Id(value: Int) extends AnyVal
+
+  case class Name(value: String) extends AnyVal
+}
