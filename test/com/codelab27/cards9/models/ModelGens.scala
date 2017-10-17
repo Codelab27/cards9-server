@@ -14,9 +14,9 @@ object ModelGens {
   private val urlProtocol = "http://"
 
   private val CardClassGenerator: Gen[CardClass] = for {
-    id <- Gen.choose(0, Int.MaxValue)
-    name <- Gen.alphaStr
-    img <- Gen.alphaStr
+    id    <- Gen.choose(0, Int.MaxValue)
+    name  <- Gen.alphaStr
+    img   <- Gen.alphaStr
   } yield {
     CardClass(CardClass.Id(id), CardClass.Name(name), new URL(urlProtocol + img))
   }
@@ -31,16 +31,16 @@ object ModelGens {
   implicit val arrows: Arbitrary[List[Arrow]] = Arbitrary(ArrowsGenerator.map(_.toList))
 
   private def CardGenerator(implicit gameSettings: GameSettings): Gen[Card] = for {
-    id <- Gen.choose(0, Int.MaxValue)
-    ownerId <- Gen.choose(0, Int.MaxValue)
-    cardClassId <- Gen.choose(0, Int.MaxValue)
-    power <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
+    id          <- Gen.choose(0, Int.MaxValue)
+    ownerId     <- Gen.choose(0, Int.MaxValue)
+    cardClass   <- CardClassGenerator
+    power       <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
     battleClass <- BattleClassGenerator
-    pdef <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
-    mdef <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
-    arrows <- ArrowsGenerator
+    pdef        <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
+    mdef        <- Gen.choose(0, gameSettings.CARD_MAX_LEVEL - 1)
+    arrows      <- ArrowsGenerator
   } yield {
-    Card(Card.Id(id), Player.Id(ownerId), CardClass.Id(cardClassId), power, battleClass, pdef, mdef, arrows.toList)
+    Card(Card.Id(id), Player.Id(ownerId), cardClass.id, power, battleClass, pdef, mdef, arrows.toList)
   }
 
   implicit def cards(implicit gameSettings: GameSettings): Arbitrary[Card] = Arbitrary(CardGenerator)
@@ -50,8 +50,8 @@ object ModelGens {
 
   private def BoardGenerator(implicit boardSettings: BoardSettings, gameSettings: GameSettings): Gen[Board] =
     for {
-      redHand <- HandGenerator
-      blueHand <- HandGenerator
+      redHand   <- HandGenerator
+      blueHand  <- HandGenerator
     } yield {
       Board.random(redHand, blueHand, boardSettings)
     }

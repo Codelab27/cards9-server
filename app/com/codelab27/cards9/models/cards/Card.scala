@@ -1,6 +1,5 @@
 package com.codelab27.cards9.models.cards
 
-import com.codelab27.cards9.models.cards.BattleClass.{Assault, Flexible, Magical, Physical}
 import com.codelab27.cards9.models.players.Player
 
 import scala.util.Random

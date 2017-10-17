@@ -6,7 +6,19 @@ lazy val cards9 = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.11"
 
-scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
+scalacOptions ++= Seq(
+  "-unchecked",
+  "-deprecation",
+  "-feature",
+  "-target:jvm-1.8",
+  "-encoding", "UTF-8",
+  "-Xfuture",
+  "-Yno-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-numeric-widen",
+  "-Ywarn-value-discard",
+  "-Ywarn-unused"
+)
 
 routesGenerator := InjectedRoutesGenerator
 
