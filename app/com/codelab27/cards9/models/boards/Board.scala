@@ -129,7 +129,7 @@ object Board {
 
         card.arrows
           .map(arrow => (arrow, Arrow.arrowCoords(arrow, coords)))
-          .filter { case (arrow: Arrow, coords: Coordinates) => areValidCoords(board, coords) }
+          .filter { case (_, coords: Coordinates) => areValidCoords(board, coords) }
           .collect {
             case (arrow, arrowCoord) =>
               board.grid.coords(arrowCoord.x)(arrowCoord.y) match {

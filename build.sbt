@@ -4,7 +4,7 @@ version := "0.1"
 
 lazy val cards9 = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.11"
+scalaVersion := "2.12.3"
 
 scalacOptions ++= Seq(
   "-unchecked",
@@ -20,13 +20,22 @@ scalacOptions ++= Seq(
   "-Ywarn-unused"
 )
 
+// https://github.com/playframework/playframework/issues/7832#issuecomment-336014319
+dependencyOverrides ++= Seq(
+  "com.typesafe.akka" %% "akka-actor" % "2.5.6",
+  "com.typesafe.akka" %% "akka-stream" % "2.5.6",
+  "com.google.guava" % "guava" % "22.0",
+  "org.slf4j" % "slf4j-api" % "1.7.25"
+)
+
 routesGenerator := InjectedRoutesGenerator
 
 libraryDependencies ++= Seq(
-    "com.typesafe.play" %% "play-slick" % "2.1.0",
-    "com.typesafe.play" %% "play-slick-evolutions" % "2.1.0",
-    "org.postgresql" % "postgresql" % "42.1.1",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+    "com.typesafe.play" %% "play-slick" % "3.0.1",
+    "com.typesafe.play" %% "play-slick-evolutions" % "3.0.1",
+    "org.postgresql" % "postgresql" % "42.1.4",
+    "org.scalactic" %% "scalactic" % "3.0.4",
+    "org.scalatest" %% "scalatest" % "3.0.4" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
     "com.beachape" %% "enumeratum" % "1.5.12"
 )
