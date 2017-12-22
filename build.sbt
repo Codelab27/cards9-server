@@ -28,30 +28,32 @@ scalacOptions ++= Seq(
   "-Ywarn-dead-code",
   "-Ywarn-numeric-widen",
   "-Ywarn-value-discard",
-  "-Ywarn-unused"
+  "-Ywarn-unused",
+  "-Ypartial-unification"
 )
 
 // https://github.com/playframework/playframework/issues/7832#issuecomment-336014319
 dependencyOverrides ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.5.6",
-  "com.typesafe.akka" %% "akka-stream" % "2.5.6",
-  "com.google.guava" % "guava" % "22.0",
-  "org.slf4j" % "slf4j-api" % "1.7.25"
+  "com.typesafe.akka" %% "akka-actor"   % "2.5.6",
+  "com.typesafe.akka" %% "akka-stream"  % "2.5.6",
+  "com.google.guava"   % "guava"        % "22.0",
+  "org.slf4j"          % "slf4j-api"    % "1.7.25"
 )
 
 routesGenerator := InjectedRoutesGenerator
 
 libraryDependencies ++= Seq(
     guice,
-    "com.typesafe.play" %% "play-slick" % "3.0.1",
-    "com.typesafe.play" %% "play-slick-evolutions" % "3.0.1",
-    "org.postgresql" % "postgresql" % "42.1.4",
-    "com.h2database" % "h2" % "1.4.196",
-    "org.scalactic" %% "scalactic" % "3.0.4",
-    "org.scalatest" %% "scalatest" % "3.0.4" % "it,test",
-    "org.scalacheck" %% "scalacheck" % "1.13.4" % "it,test",
-    "com.beachape" %% "enumeratum" % "1.5.12",
-    "org.typelevel" %% "cats-core" % "1.0.0-MF"
+    "com.typesafe.play"           %% "play-slick"             % "3.0.1",
+    "com.typesafe.play"           %% "play-slick-evolutions"  % "3.0.1",
+    "org.postgresql"               % "postgresql"             % "42.1.4",
+    "com.h2database"               % "h2"                     % "1.4.196",
+    "org.scalactic"               %% "scalactic"              % "3.0.4",
+    "org.scalatest"               %% "scalatest"              % "3.0.4"       % "it,test",
+    "org.scalacheck"              %% "scalacheck"             % "1.13.4"      % "it,test",
+    "com.beachape"                %% "enumeratum"             % "1.5.12",
+    "org.typelevel"               %% "cats-core"              % "1.0.0-RC1",
+    "com.github.julien-truffaut"  %% "monocle-core"           % "1.4.0"
 )
 
 fork in run := true
