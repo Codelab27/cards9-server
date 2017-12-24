@@ -1,25 +1,26 @@
-package com.codelab27.cards9.models.players
+package com.codelab27.cards9.models.matches
 
-import com.codelab27.cards9.models.boards.Board
-import com.codelab27.cards9.models.cards.Fight
-import com.codelab27.cards9.models.players.Match.MatchState
+import com.codelab27.cards9.models.matches.Match.MatchState
+import com.codelab27.cards9.models.players.Player
+
+import enumeratum._
 
 /**
   * A cards match.
   *
   * @param red player one identifier
   * @param blue player two identifier
-  * @param board the board
-  * @param state the current state of the match
-  * @param fights list of already computed fights
+  * @param state current state of the match
+  * @param snapshot snapshot including the board and fights
+  * @param id unique identifier of the match
   */
 final case class Match(
-  red: Option[Player.Id],
-  blue: Option[Player.Id],
-  board: Board,
-  state: MatchState,
-  fights: List[Fight],
-  id: Option[Match.Id])
+    red: Option[Player.Id],
+    blue: Option[Player.Id],
+    state: MatchState,
+    snapshot: Option[MatchSnapshot],
+    id: Option[Match.Id]
+)
 
 object Match {
 
@@ -31,9 +32,11 @@ object Match {
 
   case class Score(red: RedScore, blue: BlueScore)
 
-  sealed trait MatchState
+  sealed trait MatchState extends EnumEntry
 
-  object MatchState {
+  object MatchState extends Enum[MatchState] {
+
+    val values = findValues
 
     // Waiting for an opponent
     case object Waiting extends MatchState

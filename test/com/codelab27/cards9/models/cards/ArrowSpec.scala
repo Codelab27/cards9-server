@@ -1,6 +1,6 @@
 package com.codelab27.cards9.models
 
-import ModelGens._
+import com.codelab27.cards9.models.ModelGens._
 import com.codelab27.cards9.models.cards.Arrow
 import com.codelab27.cards9.specs.ModelSpec
 

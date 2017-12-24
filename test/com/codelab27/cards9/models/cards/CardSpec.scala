@@ -1,8 +1,8 @@
 package com.codelab27.cards9.models.cards
 
 import com.codelab27.cards9.models.ModelGens._
-import com.codelab27.cards9.specs.ModelSpec
 import com.codelab27.cards9.services.settings.GameSettings
+import com.codelab27.cards9.specs.ModelSpec
 
 class CardSpec extends ModelSpec {
 

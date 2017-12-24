@@ -1,5 +1,0 @@
-#################
-# Cards9 routes #
-#################
-
-GET         /           controllers.Default.todo

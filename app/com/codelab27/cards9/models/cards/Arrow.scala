@@ -1,6 +1,7 @@
 package com.codelab27.cards9.models.cards
 
 import com.codelab27.cards9.models.boards.{Coordinates, XAxis, YAxis}
+
 import enumeratum._
 
 /**

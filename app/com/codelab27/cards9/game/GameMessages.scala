@@ -2,7 +2,8 @@ package com.codelab27.cards9.game
 
 import com.codelab27.cards9.models.boards.Coordinates
 import com.codelab27.cards9.models.cards.Card
-import com.codelab27.cards9.models.players.{Match, Player}
+import com.codelab27.cards9.models.matches.Match
+import com.codelab27.cards9.models.players.Player
 
 object GameMessages {
   sealed trait GameMessage

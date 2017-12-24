@@ -8,6 +8,7 @@ import com.codelab27.cards9.models.cards.BattleClass._
 import com.codelab27.cards9.models.cards._
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.settings.GameSettings
+
 import org.scalacheck.{Arbitrary, Gen}
 
 object ModelGens {

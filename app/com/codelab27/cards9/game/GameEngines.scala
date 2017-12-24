@@ -1,13 +1,14 @@
 package com.codelab27.cards9.game
 
-import cats.syntax.either._
 import com.codelab27.cards9.models.boards.Board._
 import com.codelab27.cards9.models.boards._
 import com.codelab27.cards9.models.cards.{Arrow, BattleClass, Card, Fight}
-import com.codelab27.cards9.models.players.Match
-import com.codelab27.cards9.models.players.Match.{BlueScore, RedScore, Score}
+import com.codelab27.cards9.models.matches.Match
+import com.codelab27.cards9.models.matches.Match.{BlueScore, RedScore, Score}
 import com.codelab27.cards9.services.settings.GameSettings
 import com.codelab27.cards9.utils.FightError
+
+import cats.syntax.either._
 
 import scala.math.{max, min}
 import scala.util.Random
@@ -233,7 +234,17 @@ object GameEngines {
       * @param fight    the new fight
       * @return match with the fight added
       */
-    def addFight(theMatch: Match, fight: Fight): Match = theMatch.copy(fights = theMatch.fights :+ fight)
+    def addFight(theMatch: Match, fight: Fight): Match = {
+
+      val attemptAddingFight = for {
+        snapshot <- theMatch.snapshot
+      } yield {
+        theMatch.copy(snapshot = Some(snapshot.copy(fights = snapshot.fights :+ fight)))
+      }
+
+      attemptAddingFight.getOrElse(theMatch)
+
+    }
 
     /**
       * Get the current score of the match.
@@ -242,10 +253,18 @@ object GameEngines {
       * @return the current score
       */
     def score(theMatch: Match): Score = {
-      val redScore = RedScore(cardsOf(theMatch.board, Red).length)
-      val blueScore = BlueScore(cardsOf(theMatch.board, Blue).length)
 
-      Score(redScore, blueScore)
+      val attemptScoreRetrieval = for {
+        snapshot <- theMatch.snapshot
+      } yield {
+        val redScore = RedScore(cardsOf(snapshot.board, Red).length)
+        val blueScore = BlueScore(cardsOf(snapshot.board, Blue).length)
+
+        Score(redScore, blueScore)
+      }
+
+      attemptScoreRetrieval.getOrElse(Score(RedScore(0), BlueScore(0)))
+
     }
   }
 }
