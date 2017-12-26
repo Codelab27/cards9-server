@@ -12,6 +12,7 @@ class GameRouter[MM[_]](
 
   lazy val routes = Router.from {
     case GET(p"/matches/${matchState(state)}")                   => matchMakerController.getMatchesForState(state)
+    case POST(p"/matches/create")                                => matchMakerController.createMatch()
   }
 
 }
