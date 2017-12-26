@@ -42,17 +42,19 @@ dependencyOverrides ++= Seq(
 
 libraryDependencies ++= Seq(
     guice,
-    "com.typesafe.play"           %% "play-slick"             % "3.0.1",
-    "com.typesafe.play"           %% "play-slick-evolutions"  % "3.0.1",
-    "io.kanaka"                   %% "play-monadic-actions"   % "2.1.0",
-    "org.postgresql"               % "postgresql"             % "42.1.4",
-    "com.h2database"               % "h2"                     % "1.4.196",
-    "org.scalactic"               %% "scalactic"              % "3.0.4",
-    "org.scalatest"               %% "scalatest"              % "3.0.4"       % "it,test",
-    "org.scalacheck"              %% "scalacheck"             % "1.13.4"      % "it,test",
-    "com.beachape"                %% "enumeratum"             % "1.5.12",
-    "org.typelevel"               %% "cats-core"              % "1.0.0-RC2",
-    "com.github.julien-truffaut"  %% "monocle-core"           % "1.4.0"
+    "com.typesafe.play"           %% "play-slick"                   % "3.0.1",
+    "com.typesafe.play"           %% "play-slick-evolutions"        % "3.0.1",
+    "com.typesafe.play"           %% "play-json-joda"               % "2.6.6",
+    "io.kanaka"                   %% "play-monadic-actions"         % "2.1.0",
+    "io.kanaka"                   %% "play-monadic-actions-cats"    % "2.1.0",
+    "org.postgresql"               % "postgresql"                   % "42.1.4",
+    "com.h2database"               % "h2"                           % "1.4.196",
+    "org.scalactic"               %% "scalactic"                    % "3.0.4",
+    "org.scalatest"               %% "scalatest"                    % "3.0.4"       % "it,test",
+    "org.scalacheck"              %% "scalacheck"                   % "1.13.4"      % "it,test",
+    "com.beachape"                %% "enumeratum"                   % "1.5.12",
+    "org.typelevel"               %% "cats-core"                    % "1.0.0",
+    "com.github.julien-truffaut"  %% "monocle-core"                 % "1.4.0"
 )
 
 fork in run := true
