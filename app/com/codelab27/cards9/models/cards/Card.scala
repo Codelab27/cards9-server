@@ -1,7 +1,6 @@
 package com.codelab27.cards9.models.cards
 
 import com.codelab27.cards9.models.players.Player
-import com.codelab27.cards9.services.settings.GameSettings
 
 import enumeratum._
 
@@ -46,11 +45,11 @@ final case class Card(
   pdef: Int,
   mdef: Int,
   arrows: List[Arrow],
-  id: Option[Card.Id] = None)(implicit gameSettings: GameSettings) {
+  id: Option[Card.Id] = None) {
 
-  require(power < gameSettings.CARD_MAX_LEVEL)
-  require(pdef < gameSettings.CARD_MAX_LEVEL)
-  require(mdef < gameSettings.CARD_MAX_LEVEL)
+//  require(power < gameSettings.CARD_MAX_LEVEL)
+//  require(pdef < gameSettings.CARD_MAX_LEVEL)
+//  require(mdef < gameSettings.CARD_MAX_LEVEL)
   require(arrows.distinct.size == arrows.size && arrows.size <= Arrow.MAX_ARROWS)
 
 }

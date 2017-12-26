@@ -1,6 +1,8 @@
 package com.codelab27.cards9.game
 
 import com.codelab27.cards9.models.boards.Board._
+import com.codelab27.cards9.models.boards.Color.{Blue, Red}
+import com.codelab27.cards9.models.boards.Square.{Block, Free, Occupied}
 import com.codelab27.cards9.models.boards._
 import com.codelab27.cards9.models.cards.{Arrow, BattleClass, Card, Fight}
 import com.codelab27.cards9.models.matches.Match

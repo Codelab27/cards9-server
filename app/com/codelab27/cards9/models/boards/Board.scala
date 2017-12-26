@@ -3,22 +3,41 @@ package com.codelab27.cards9.models.boards
 import com.codelab27.cards9.models.boards.Board.{Grid, Hand}
 import com.codelab27.cards9.models.cards.Card
 
+import enumeratum._
+
 import scala.Array._
 
 /**
  * Possible colors of a card.
  */
-sealed trait Color { def flip: Color }
-case object Red extends Color { def flip: Color = Blue }
-case object Blue extends Color { def flip: Color = Red }
+sealed trait Color extends EnumEntry { def flip: Color }
+
+object Color extends Enum[Color] {
+
+  val values = findValues
+
+  case object Red extends Color { def flip: Color = Blue }
+
+  case object Blue extends Color { def flip: Color = Red }
+
+}
 
 /**
  * Possible states of a square.
  */
-sealed trait Square
-case class Occupied(card: Card, color: Color) extends Square { override def toString = s"${card.id},${color}" }
-case object Block extends Square { override def toString = "B" }
-case object Free extends Square { override def toString = "F" }
+sealed trait Square extends EnumEntry
+
+object Square extends Enum[Square] {
+
+  val values = findValues
+
+  case object Block extends Square { override def toString = "B" }
+
+  case object Free extends Square { override def toString = "F" }
+
+  case class Occupied(card: Card, color: Color) extends Square { override def toString = s"${card.id},${color}" }
+
+}
 
 case class BoardSize(value: Int) extends AnyVal
 case class BoardMaxBlocks(value: Int) extends AnyVal

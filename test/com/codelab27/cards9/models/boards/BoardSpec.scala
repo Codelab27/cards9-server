@@ -1,6 +1,7 @@
 package com.codelab27.cards9.models.boards
 
 import com.codelab27.cards9.models.ModelGens._
+import com.codelab27.cards9.models.boards.Square.Block
 import com.codelab27.cards9.services.settings.GameSettings
 import com.codelab27.cards9.specs.ModelSpec
 

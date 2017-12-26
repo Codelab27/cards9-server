@@ -10,7 +10,7 @@ object DefaultComonads {
   lazy val defaultTimeout = 1.second
 
   implicit def futureComonad(implicit co: CoflatMap[Future]): Comonad[Future] = new Comonad[Future] {
-    override def extract[A](x: Future[A]): A = Await.result(x, defaultTimeout)
+    override def extract[A](fa: Future[A]): A = Await.result(fa, defaultTimeout)
 
     override def coflatMap[A, B](fa: Future[A])(f: Future[A] => B) = co.coflatMap(fa)(f)
 
