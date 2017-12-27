@@ -1,6 +1,7 @@
 package com.codelab27.cards9.services.matchmaking.mem
 
 import com.codelab27.cards9.models.matches.Match
+import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.matchmaking.MatchMaker
 
 import cats.Id
@@ -17,9 +18,8 @@ object MatchMakerInMemoryInterpreter extends MatchMaker[Id] {
 
   final val matchRepo = TrieMap.empty[Match.Id, Match]
 
-  override def findMatch(id: Option[Match.Id]) = for {
-    matchId   <- id
-    theMatch  <- matchRepo.get(matchId)
+  override def findMatch(id: Match.Id) = for {
+    theMatch  <- matchRepo.get(id)
   } yield {
     theMatch
   }
@@ -27,6 +27,14 @@ object MatchMakerInMemoryInterpreter extends MatchMaker[Id] {
   override def findMatches(state: Match.MatchState) = matchRepo
     .collect { case (_, theMatch) if theMatch.state == state => theMatch }
     .toSeq
+
+
+  override def findMatchesForPlayer(
+      playerId: Player.Id
+  ) = {
+    val toComparePlayerId = Some(playerId)
+    matchRepo.values.filter(theMatch => toComparePlayerId == theMatch.red || toComparePlayerId == theMatch.blue).toSeq
+  }
 
   override def storeMatch(theMatch: Match) = theMatch.id match {
     case Some(id) => {
@@ -45,7 +53,7 @@ object MatchMakerInMemoryInterpreter extends MatchMaker[Id] {
   }
 
   override def changeMatchState(
-      id: Option[Match.Id],
+      id: Match.Id,
       state: Match.MatchState
   ) = for {
     foundMatch  <- findMatch(id)

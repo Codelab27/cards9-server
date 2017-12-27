@@ -6,46 +6,59 @@ import com.codelab27.cards9.models.matches.Match.MatchState.SettingUp
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.matchmaking.MatchMaker
 
+import cats.Bimonad
 import cats.data.OptionT
-import cats.syntax.option._
-import cats.{Comonad, Monad}
 import io.kanaka.monadic.dsl._
 
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, ControllerComponents, Request}
 
-class MatchMakerController[F[_] : Monad](
+class MatchMakerController[F[_] : Bimonad](
     cc: ControllerComponents,
     matchMaker: MatchMaker[F]
-)(implicit evf: Comonad[F]) extends AbstractController(cc) {
-
-  import com.codelab27.cards9.serdes.json.DefaultFormats._
+) extends AbstractController(cc) {
 
   implicit val ec = cc.executionContext
 
+  import com.codelab27.cards9.serdes.json.DefaultFormats._
+
   import com.codelab27.cards9.utils.DefaultStepOps._
 
-  def readPlayer(request: Request[JsValue]) = (request.body \ "playerId").validate[Player.Id]
+  import cats.syntax.comonad._
+  import cats.syntax.functor._
+
+  ///////////////////////
+  /// Body readers
+  private def readPlayer(request: Request[JsValue]) = (request.body \ "playerId").validate[Player.Id]
 
   def getMatchesForState(state: MatchState) = Action {
 
-    val attemptMatchesRetrieval: F[Seq[Match]] = matchMaker.findMatches(state)
+    val foundMatches = matchMaker.findMatches(state)
 
-    Ok(Json.toJson(evf.extract(attemptMatchesRetrieval)))
+    Ok(Json.toJson(foundMatches.extract))
 
+  }
+
+  private def playingOrWaitingMatches(playerId: Player.Id): F[Seq[Match]] = for {
+    matches <- matchMaker.findMatchesForPlayer(playerId)
+  } yield {
+    matches.filter(m => MatchState.isPlayingOrWaiting(m.state))
   }
 
   def createMatch() = Action.async(parse.json) { implicit request =>
 
-    def storeMatchForPlayer(playerId: Player.Id) = {
+    def createMatchForPlayer(playerId: Player.Id) = {
+
       val theMatch = Match(Some(playerId), None, MatchState.Waiting, None, None)
+
       OptionT(matchMaker.storeMatch(theMatch))
+
     }
 
     for {
-      playerId  <- readPlayer(request)            ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
+      playerId  <- readPlayer(request)                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
       // TODO validate player existence
-      matchId   <- storeMatchForPlayer(playerId)  ?| (_       => Conflict(s"Could not create a match"))
+      matchId   <- createMatchForPlayer(playerId)     ?| (_       => Conflict(s"Could not create a match"))
     } yield {
       Ok(Json.toJson(matchId))
     }
@@ -53,11 +66,6 @@ class MatchMakerController[F[_] : Monad](
   }
 
   def joinMatch(id: Match.Id) = Action.async(parse.json) { implicit request =>
-
-    def findMatch(matchId: Match.Id) = {
-      val theMatch = matchMaker.findMatch(Some(matchId))
-      OptionT(theMatch)
-    }
 
     def addPlayerToMatch(playerId: Player.Id, theMatch: Match) = {
 
@@ -80,7 +88,7 @@ class MatchMakerController[F[_] : Monad](
 
     for {
       playerId      <- readPlayer(request) ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
-      theMatch      <- findMatch(id)       ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
+      theMatch      <- OptionT(matchMaker.findMatch(id))    ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
       updatedMatch  <- addPlayerToMatch(playerId, theMatch) ?| (_ => Conflict(s"Could not add player to match ${id.value}"))
       _             <- OptionT(matchMaker.storeMatch(updatedMatch))  ?| (_  => Conflict(s"Could not update the match"))
     } yield {
