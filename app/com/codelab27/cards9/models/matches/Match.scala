@@ -59,6 +59,11 @@ object Match {
     // Finished and completed with score and cards exchange
     case object Finished extends MatchState
 
+    def isPlayingOrWaiting(state: MatchState): Boolean = state match {
+      case Paused | Aborted | Finished              => false
+      case Waiting | SettingUp | Starting | Ongoing => true
+    }
+
   }
 
 }

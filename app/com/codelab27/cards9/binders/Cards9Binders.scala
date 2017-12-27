@@ -1,5 +1,6 @@
 package com.codelab27.cards9.binders
 
+import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.MatchState
 
 import play.api.mvc.PathBindable
@@ -21,5 +22,13 @@ object Cards9Binders {
   }
 
   val matchState = new PathBindableExtractor[MatchState]
+
+  private implicit def mactchIdBinder: PathBindable[Match.Id] = new PathBindable[Match.Id] {
+    override def bind(key: String, value: String): Either[String, Match.Id] = Right(Match.Id.apply(value))
+
+    override def unbind(key: String, matchId: Match.Id): String = matchId.value
+  }
+
+  val matchId = new PathBindableExtractor[Match.Id]
 
 }
