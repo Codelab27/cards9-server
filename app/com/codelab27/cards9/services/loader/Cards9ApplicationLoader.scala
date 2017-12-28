@@ -15,6 +15,8 @@ class Cards9ApplicationLoader extends ApplicationLoader {
 
 class Cards9Components(context: Context) extends BuiltInComponentsFromContext(context) with NoHttpFiltersComponents {
 
+  import com.codelab27.cards9.utils.DefaultCatsInstances._
+
   lazy val matchMaker = MatchMakerInMemoryInterpreter
   lazy val matchMakerController = new MatchMakerController(controllerComponents, matchMaker)
 

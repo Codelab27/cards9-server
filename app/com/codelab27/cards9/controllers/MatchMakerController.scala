@@ -6,26 +6,30 @@ import com.codelab27.cards9.models.matches.Match.MatchState.SettingUp
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.matchmaking.MatchMaker
 
-import cats.Bimonad
-import cats.data.OptionT
 import io.kanaka.monadic.dsl._
+
+import cats.Bimonad
+import cats.arrow.FunctionK
+import cats.data.OptionT
 
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, ControllerComponents, Request}
 
+import scala.concurrent.Future
+
 class MatchMakerController[F[_] : Bimonad](
     cc: ControllerComponents,
     matchMaker: MatchMaker[F]
-) extends AbstractController(cc) {
+)(implicit fshandler: FunctionK[F, Future]) extends AbstractController(cc) {
 
   implicit val ec = cc.executionContext
 
   import com.codelab27.cards9.serdes.json.DefaultFormats._
 
-  import com.codelab27.cards9.utils.DefaultStepOps._
-
   import cats.syntax.comonad._
   import cats.syntax.functor._
+
+  import com.codelab27.cards9.utils.DefaultStepOps._
 
   ///////////////////////
   /// Body readers
@@ -56,9 +60,9 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      playerId  <- readPlayer(request)                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
+      playerId  <- readPlayer(request)                  ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
       // TODO validate player existence
-      matchId   <- createMatchForPlayer(playerId)     ?| (_       => Conflict(s"Could not create a match"))
+      matchId   <- createMatchForPlayer(playerId).step  ?| (_       => Conflict(s"Could not create a match"))
     } yield {
       Ok(Json.toJson(matchId))
     }
@@ -87,10 +91,10 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      playerId      <- readPlayer(request) ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
-      theMatch      <- OptionT(matchMaker.findMatch(id))    ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- addPlayerToMatch(playerId, theMatch) ?| (_ => Conflict(s"Could not add player to match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch))  ?| (_  => Conflict(s"Could not update the match"))
+      playerId      <- readPlayer(request)                                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
+      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_ => Conflict(s"Could not add player to match ${id.value}"))
+      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_  => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }

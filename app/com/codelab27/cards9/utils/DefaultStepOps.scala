@@ -1,22 +1,25 @@
 package com.codelab27.cards9.utils
 
-import cats.Comonad
-import cats.data.OptionT
 import io.kanaka.monadic.dsl.{Step, StepOps}
+
+import cats.Bimonad
+import cats.arrow.FunctionK
+import cats.data.OptionT
 
 import play.api.mvc.Result
 
 import scala.concurrent.Future
-import scala.language.implicitConversions
 
 object DefaultStepOps {
 
-  implicit def optiontFToStep[F[_], A](
-      optionTF: OptionT[F, A]
-  )(implicit co: Comonad[F]): StepOps[A, Unit] = new StepOps[A, Unit] {
-    override def orFailWith(failureHandler: Unit => Result): Step[A] = {
-      Step(Future.successful(co.extract(optionTF.cata[Either[Result, A]](Left(failureHandler(())), Right(_)))))
+  implicit class OptiontFToStep[F[_] : Bimonad, A](optionTF: OptionT[F, A]) {
+
+    def step(implicit fToFutureNatTransformation: FunctionK[F, Future]): StepOps[A, Unit] = new StepOps[A, Unit] {
+      override def orFailWith(failureHandler: Unit => Result): Step[A] = {
+        Step(fToFutureNatTransformation(optionTF.cata[Either[Result, A]](Left(failureHandler(())), Right(_))))
+      }
     }
+
   }
 
 }

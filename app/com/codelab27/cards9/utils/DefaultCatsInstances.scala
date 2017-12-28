@@ -1,11 +1,12 @@
 package com.codelab27.cards9.utils
 
-import cats.{Bimonad, CoflatMap, Comonad, Monad}
+import cats.arrow.FunctionK
+import cats.{Bimonad, CoflatMap, Comonad, Id, Monad}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-object DefaultComonads {
+object DefaultCatsInstances {
 
   lazy val defaultTimeout = 1.second
 
@@ -29,5 +30,9 @@ object DefaultComonads {
 
     override def pure[A](x: A) = m.pure(x)
   }
+
+  implicit val futureToFuture = FunctionK.id[Future]
+
+  implicit val idToFuture = FunctionK.lift[Id, Future]((id: Id[_]) => Future.successful(id))
 
 }
