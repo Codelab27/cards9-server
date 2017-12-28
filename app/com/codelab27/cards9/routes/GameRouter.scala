@@ -14,6 +14,7 @@ class GameRouter[MM[_]](
     case GET(p"/matches/${matchState(state)}")                   => matchMakerController.getMatchesForState(state)
     case POST(p"/matches/create")                                => matchMakerController.createMatch()
     case POST(p"/matches/${matchId(id)}/join")                   => matchMakerController.joinMatch(id)
+    case POST(p"/matches/${matchId(id)}/leave")                  => matchMakerController.leaveMatch(id)
   }
 
 }

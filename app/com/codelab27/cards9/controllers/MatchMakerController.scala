@@ -1,8 +1,7 @@
 package com.codelab27.cards9.controllers
 
 import com.codelab27.cards9.models.matches.Match
-import com.codelab27.cards9.models.matches.Match.MatchState
-import com.codelab27.cards9.models.matches.Match.MatchState.SettingUp
+import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.matchmaking.MatchMaker
 
@@ -25,11 +24,10 @@ class MatchMakerController[F[_] : Bimonad](
   implicit val ec = cc.executionContext
 
   import com.codelab27.cards9.serdes.json.DefaultFormats._
+  import com.codelab27.cards9.utils.DefaultStepOps._
 
   import cats.syntax.comonad._
   import cats.syntax.functor._
-
-  import com.codelab27.cards9.utils.DefaultStepOps._
 
   ///////////////////////
   /// Body readers
@@ -53,7 +51,7 @@ class MatchMakerController[F[_] : Bimonad](
 
     def createMatchForPlayer(playerId: Player.Id) = {
 
-      val theMatch = Match(Some(playerId), None, MatchState.Waiting, None, None)
+      val theMatch = Match(RedPlayer(Some(playerId)), BluePlayer(), MatchState.Waiting, None, None)
 
       OptionT(matchMaker.storeMatch(theMatch))
 
@@ -71,30 +69,67 @@ class MatchMakerController[F[_] : Bimonad](
 
   def joinMatch(id: Match.Id) = Action.async(parse.json) { implicit request =>
 
-    def addPlayerToMatch(playerId: Player.Id, theMatch: Match) = {
+    def addPlayerToMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
 
-      val (red, blue) = (theMatch.red, theMatch.blue) match {
-        case (None, None)                             => (Some(playerId), None) // Probably never reaching this case
-        case (r @ Some(rid), None) if rid != playerId => (r, Some(playerId))    // Normal
-        case (None, b @ Some(rid)) if rid != playerId => (Some(playerId), b)    // Normal
-        case (_, _)                                   => (None, None)           // Full or repeated player id :(
+      lazy val alreadyInThisMatch = Match.isPlayerInMatch(theMatch, playerId)
+
+      val updatedMatch = for {
+        _     <- Option(theMatch.state == MatchState.Waiting && alreadyInThisMatch.isEmpty).filter(identity)
+        color <- Match.emptySlot(theMatch)
+      } yield {
+
+        val matchWithNewPlayer = color match {
+          case _: RedPlayer   => theMatch.copy(red = RedPlayer(Some(playerId)))
+          case _: BluePlayer  => theMatch.copy(blue = BluePlayer(Some(playerId)))
+        }
+
+        matchWithNewPlayer.copy(state = MatchState.SettingUp)
       }
 
-      lazy val matchUpdated = theMatch.copy(red = red, blue = blue, state = SettingUp)
-
-      OptionT.fromOption(
-        Option((red.isEmpty && blue.isEmpty) || theMatch.state != MatchState.Waiting).collect {
-          case false => matchUpdated
-        }
-      )
-
+      OptionT.fromOption(updatedMatch)
     }
 
     for {
       playerId      <- readPlayer(request)                                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
       theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_ => Conflict(s"Could not add player to match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_  => Conflict(s"Could not update the match"))
+      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_       => Conflict(s"Could not add player to match ${id.value}"))
+      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_       => Conflict(s"Could not update the match"))
+    } yield {
+      Ok(Json.toJson(updatedMatch))
+    }
+
+  }
+
+  def leaveMatch(id: Match.Id) = Action.async(parse.json) { implicit request =>
+
+    def removePlayerFromMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
+
+      val removedPlayer = for {
+        _     <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
+        color <- Match.isPlayerInMatch(theMatch, playerId)
+      } yield {
+
+        val matchWithPlayers = color match {
+          case _: RedPlayer   => theMatch.copy(red = RedPlayer())
+          case _: BluePlayer  => theMatch.copy(blue = BluePlayer())
+        }
+
+        if (matchWithPlayers.red.id.isEmpty && matchWithPlayers.blue.id.isEmpty) {
+          matchWithPlayers.copy(state = MatchState.Aborted)
+        } else {
+          matchWithPlayers.copy(state = MatchState.Waiting)
+        }
+
+      }
+
+      OptionT.fromOption(removedPlayer)
+    }
+
+    for {
+      playerId      <- readPlayer(request)                                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
+      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step     ?| (_       => Conflict(s"Could not remove player from match ${id.value}"))
+      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_       => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }

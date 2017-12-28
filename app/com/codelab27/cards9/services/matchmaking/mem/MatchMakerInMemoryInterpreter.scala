@@ -32,8 +32,7 @@ object MatchMakerInMemoryInterpreter extends MatchMaker[Id] {
   override def findMatchesForPlayer(
       playerId: Player.Id
   ) = {
-    val toComparePlayerId = Some(playerId)
-    matchRepo.values.filter(theMatch => toComparePlayerId == theMatch.red || toComparePlayerId == theMatch.blue).toSeq
+    matchRepo.values.filter(theMatch => Match.isPlayerInMatch(theMatch, playerId).isDefined).toSeq
   }
 
   override def storeMatch(theMatch: Match) = theMatch.id match {
