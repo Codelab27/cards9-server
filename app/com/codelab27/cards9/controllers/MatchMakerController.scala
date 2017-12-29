@@ -1,6 +1,6 @@
 package com.codelab27.cards9.controllers
 
-import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
+import com.codelab27.cards9.game.engines
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.PlayerAction.{Join, Leave, Ready, Start}
 import com.codelab27.cards9.models.matches.Match._
@@ -40,131 +40,49 @@ class MatchMakerController[F[_] : Bimonad](
   }
 
   private def playingOrWaitingMatches(playerId: Player.Id): F[Seq[Match]] = for {
-    matches <- matchRepo.findMatchesForPlayer(playerId)
+    foundMatches <- matchRepo.findMatchesForPlayer(playerId)
   } yield {
-    matches.filter(m => MatchState.isPlayingOrWaiting(m.state))
+    foundMatches.filter(engines.matches.isPlayingOrWaiting)
   }
 
   def createMatch(playerId: Player.Id) = Action.async { implicit request =>
 
-    def createMatchForPlayer(playerId: Player.Id) = {
-
-      val theMatch = Match(Some(RedPlayer(playerId, IsReady(false))), None, MatchState.Waiting, None, None)
-
-      OptionT(matchRepo.storeMatch(theMatch))
-
-    }
+    val theMatch = engines.matches.createMatchForPlayer(playerId)
 
     for {
       // TODO validate player existence
-      matchId <- createMatchForPlayer(playerId).step  ?| (_ => Conflict(s"Could not create a match"))
+      matchId <- OptionT(matchRepo.storeMatch(theMatch)).step ?| (_ => Conflict(s"Could not create a match"))
     } yield {
       Ok(Json.toJson(matchId))
     }
 
   }
 
-  def playerActionOnMatch(id: Match.Id, playerId: Player.Id, action: PlayerAction) = action match {
+  private def updateMatchWithPlayer(id: Match.Id, playerId: Player.Id)(update: (Match, Player.Id) => Option[Match]) = {
+    Action.async { implicit request =>
 
-    case Join   => joinMatch(id, playerId)
-    case Leave  => leaveMatch(id, playerId)
-    case Ready  => playerReady(id, playerId)
-    case Start  => ???
+      def performUpdate(theMatch: Match) = OptionT.fromOption(update(theMatch, playerId))
 
-  }
-
-  private def joinMatch(id: Match.Id, playerId: Player.Id) = Action.async { implicit request =>
-
-    def addPlayerToMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
-
-      lazy val alreadyInThisMatch = Match.isPlayerInMatch(theMatch, playerId)
-
-      val updatedMatch = for {
-        _     <- Option(theMatch.state == MatchState.Waiting && alreadyInThisMatch.isEmpty).filter(identity)
-        color <- Match.emptySlot(theMatch)
+      for {
+        theMatch      <- OptionT(matchRepo.findMatch(id)).step            ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+        updatedMatch  <- performUpdate(theMatch).step                     ?| (_ => Conflict(s"Could not perform action on player ${playerId.value} of match ${id.value}"))
+        _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step ?| (_ => Conflict(s"Could not update the match"))
       } yield {
-
-        val matchWithNewPlayer = color match {
-          case Red  => theMatch.copy(red = Some(RedPlayer(playerId, IsReady(false))))
-          case Blue => theMatch.copy(blue = Some(BluePlayer(playerId, IsReady(false))))
-        }
-
-        matchWithNewPlayer.copy(state = MatchState.SettingUp)
+        Ok(Json.toJson(updatedMatch))
       }
 
-      OptionT.fromOption(updatedMatch)
     }
-
-    for {
-      theMatch      <- OptionT(matchRepo.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step         ?| (_ => Conflict(s"Could not add player ${playerId.value} to match ${id.value}"))
-      _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
-    } yield {
-      Ok(Json.toJson(updatedMatch))
-    }
-
   }
 
-  private def leaveMatch(id: Match.Id, playerId: Player.Id) = Action.async { implicit request =>
+  def playerActionOnMatch(id: Match.Id, playerId: Player.Id, action: PlayerAction) = {
 
-    def removePlayerFromMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
+    val actionOnMatchAndPlayer = updateMatchWithPlayer(id, playerId) _
 
-      val removedPlayer = for {
-        _       <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
-        player  <- Match.isPlayerInMatch(theMatch, playerId)
-      } yield {
-
-        val matchWithPlayers = player match {
-          case _: RedPlayer   => theMatch.copy(red = None)
-          case _: BluePlayer  => theMatch.copy(blue = None)
-        }
-
-        if (matchWithPlayers.red.isEmpty && matchWithPlayers.blue.isEmpty) {
-          matchWithPlayers.copy(state = MatchState.Aborted)
-        } else {
-          matchWithPlayers.copy(state = MatchState.Waiting)
-        }
-
-      }
-
-      OptionT.fromOption(removedPlayer)
-    }
-
-    for {
-      theMatch      <- OptionT(matchRepo.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step    ?| (_ => Conflict(s"Could not remove player ${playerId.value} from match ${id.value}"))
-      _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
-    } yield {
-      Ok(Json.toJson(updatedMatch))
-    }
-
-  }
-
-  private def playerReady(id: Match.Id, playerId: Player.Id) = Action.async { implicit request =>
-
-    def switchPlayerReady(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
-
-      val readyToPlay = for {
-        _       <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
-        player  <- Match.isPlayerInMatch(theMatch, playerId)
-      } yield {
-
-        player match {
-          case redPlayer: RedPlayer   => theMatch.copy(red = Some(redPlayer.copy(ready = IsReady(!redPlayer.ready.value))))
-          case bluePlayer: BluePlayer => theMatch.copy(blue = Some(bluePlayer.copy(ready = IsReady(!bluePlayer.ready.value))))
-        }
-
-      }
-
-      OptionT.fromOption(readyToPlay)
-    }
-
-    for {
-      theMatch      <- OptionT(matchRepo.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- switchPlayerReady(playerId, theMatch).step        ?| (_ => Conflict(s"Could not switch player ${playerId.value} ready from match ${id.value}"))
-      _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
-    } yield {
-      Ok(Json.toJson(updatedMatch))
+    action match {
+      case Join   => actionOnMatchAndPlayer(engines.matches.addPlayerToMatch)
+      case Leave  => actionOnMatchAndPlayer(engines.matches.removePlayerFromMatch)
+      case Ready  => actionOnMatchAndPlayer(engines.matches.switchPlayerReadiness)
+      case Start  => ???
     }
 
   }

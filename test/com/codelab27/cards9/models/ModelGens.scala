@@ -2,7 +2,7 @@ package com.codelab27.cards9.models
 
 import java.net.URL
 
-import com.codelab27.cards9.game.GameEngines
+import com.codelab27.cards9.game.engines._
 import com.codelab27.cards9.models.boards.{Board, BoardSettings}
 import com.codelab27.cards9.models.cards.BattleClass._
 import com.codelab27.cards9.models.cards._
@@ -54,7 +54,7 @@ object ModelGens {
       redHand   <- HandGenerator
       blueHand  <- HandGenerator
     } yield {
-      GameEngines.BoardEngine.random(redHand, blueHand, boardSettings)
+      board.random(redHand, blueHand, boardSettings)
     }
 
   implicit def boards(implicit boardSettings: BoardSettings, gameSettings: GameSettings): Arbitrary[Board] = {

@@ -1,5 +1,6 @@
 package com.codelab27.cards9.repos.matches.mem
 
+import com.codelab27.cards9.game.engines
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.repos.matches.MatchRepository
@@ -29,10 +30,8 @@ object MatchRepositoryInMemoryInterpreter extends MatchRepository[Id] {
     .toSeq
 
 
-  override def findMatchesForPlayer(
-      playerId: Player.Id
-  ) = {
-    matchRepo.values.filter(theMatch => Match.isPlayerInMatch(theMatch, playerId).isDefined).toSeq
+  override def findMatchesForPlayer(playerId: Player.Id) = {
+    matchRepo.values.filter(theMatch => engines.matches.playerInMatch(theMatch, playerId).isDefined).toSeq
   }
 
   override def storeMatch(theMatch: Match) = theMatch.id match {

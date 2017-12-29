@@ -1,7 +1,5 @@
 package com.codelab27.cards9.models.matches
 
-import com.codelab27.cards9.models.common.Common.Color
-import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
 import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
 import com.codelab27.cards9.models.players.Player
 
@@ -42,20 +40,6 @@ object Match {
 
   case class BluePlayer(id: Player.Id, ready: IsReady) extends ColoredPlayer
 
-  def isPlayerInMatch(theMatch: Match, player: Player.Id): Option[ColoredPlayer] = {
-    val redSlot       = for (redPlayer <- theMatch.red if redPlayer.id == player) yield redPlayer
-    lazy val blueSlot = for (bluePlayer <- theMatch.blue if bluePlayer.id == player) yield bluePlayer
-
-    redSlot.orElse(blueSlot)
-  }
-
-  def emptySlot(theMatch: Match): Option[Color] = {
-    val redSlot       = for (_ <- Option(theMatch.red.isEmpty).filter(identity)) yield Red
-    lazy val blueSlot = for (_ <- Option(theMatch.blue.isEmpty).filter(identity)) yield Blue
-
-    redSlot.orElse(blueSlot)
-  }
-
   sealed trait MatchState extends EnumEntry
 
   object MatchState extends Enum[MatchState] {
@@ -82,11 +66,6 @@ object Match {
 
     // Finished and completed with score and cards exchange
     case object Finished extends MatchState
-
-    def isPlayingOrWaiting(state: MatchState): Boolean = state match {
-      case Paused | Aborted | Finished              => false
-      case Waiting | SettingUp | Starting | Ongoing => true
-    }
 
   }
 
