@@ -68,7 +68,7 @@ class MatchMakerController[F[_] : Bimonad](
 
     case Join   => joinMatch(id, playerId)
     case Leave  => leaveMatch(id, playerId)
-    case Ready  => ???
+    case Ready  => playerReady(id, playerId)
     case Start  => ???
 
   }
@@ -97,7 +97,7 @@ class MatchMakerController[F[_] : Bimonad](
 
     for {
       theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_ => Conflict(s"Could not add player to match ${id.value}"))
+      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_ => Conflict(s"Could not add player ${playerId.value} to match ${id.value}"))
       _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
@@ -132,7 +132,36 @@ class MatchMakerController[F[_] : Bimonad](
 
     for {
       theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step     ?| (_ => Conflict(s"Could not remove player from match ${id.value}"))
+      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step     ?| (_ => Conflict(s"Could not remove player ${playerId.value} from match ${id.value}"))
+      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
+    } yield {
+      Ok(Json.toJson(updatedMatch))
+    }
+
+  }
+
+  private def playerReady(id: Match.Id, playerId: Player.Id) = Action.async { implicit request =>
+
+    def switchPlayerReady(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
+
+      val readyToPlay = for {
+        _       <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
+        player  <- Match.isPlayerInMatch(theMatch, playerId)
+      } yield {
+
+        player match {
+          case redPlayer: RedPlayer   => theMatch.copy(red = Some(redPlayer.copy(ready = IsReady(!redPlayer.ready.value))))
+          case bluePlayer: BluePlayer => theMatch.copy(blue = Some(bluePlayer.copy(ready = IsReady(!bluePlayer.ready.value))))
+        }
+
+      }
+
+      OptionT.fromOption(readyToPlay)
+    }
+
+    for {
+      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- switchPlayerReady(playerId, theMatch).step         ?| (_ => Conflict(s"Could not switch player ${playerId.value} ready from match ${id.value}"))
       _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
