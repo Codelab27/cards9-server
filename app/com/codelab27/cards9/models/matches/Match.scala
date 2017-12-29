@@ -1,5 +1,7 @@
 package com.codelab27.cards9.models.matches
 
+import com.codelab27.cards9.models.common.Common.Color
+import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
 import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
 import com.codelab27.cards9.models.players.Player
 
@@ -15,8 +17,8 @@ import enumeratum._
   * @param id unique identifier of the match
   */
 final case class Match(
-    red: RedPlayer,
-    blue: BluePlayer,
+    red: Option[RedPlayer],
+    blue: Option[BluePlayer],
     state: MatchState,
     snapshot: Option[MatchSnapshot],
     id: Option[Match.Id]
@@ -32,26 +34,22 @@ object Match {
 
   case class Score(red: RedScore, blue: BlueScore)
 
-  sealed trait ColorPlayer {
+  sealed trait ColoredPlayer
 
-    def id: Option[Player.Id]
+  case class RedPlayer(id: Player.Id) extends ColoredPlayer
 
-  }
+  case class BluePlayer(id: Player.Id) extends ColoredPlayer
 
-  case class RedPlayer(id: Option[Player.Id] = None) extends ColorPlayer
-
-  case class BluePlayer(id: Option[Player.Id] = None) extends ColorPlayer
-
-  def isPlayerInMatch(theMatch: Match, player: Player.Id): Option[ColorPlayer] = {
-    val redSlot = for (id <- theMatch.red.id if id == player) yield theMatch.red
-    lazy val blueSlot = for (id <- theMatch.blue.id if id == player) yield theMatch.blue
+  def isPlayerInMatch(theMatch: Match, player: Player.Id): Option[ColoredPlayer] = {
+    val redSlot = for (redPlayer <- theMatch.red if redPlayer.id == player) yield redPlayer
+    lazy val blueSlot = for (bluePlayer <- theMatch.blue if bluePlayer.id == player) yield bluePlayer
 
     redSlot.orElse(blueSlot)
   }
 
-  def emptySlot(theMatch: Match): Option[ColorPlayer] = {
-    val redSlot = for (_ <- Option(theMatch.red.id.isEmpty).filter(identity)) yield theMatch.red
-    lazy val blueSlot = for (_ <- Option(theMatch.blue.id.isEmpty).filter(identity)) yield theMatch.blue
+  def emptySlot(theMatch: Match): Option[Color] = {
+    val redSlot = for (_ <- Option(theMatch.red.isEmpty).filter(identity)) yield Red
+    lazy val blueSlot = for (_ <- Option(theMatch.blue.isEmpty).filter(identity)) yield Blue
 
     redSlot.orElse(blueSlot)
   }

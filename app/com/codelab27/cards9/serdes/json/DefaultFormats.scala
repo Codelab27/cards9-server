@@ -3,6 +3,7 @@ package com.codelab27.cards9.serdes.json
 import com.codelab27.cards9.models.boards.Square.{Block, Free, Occupied}
 import com.codelab27.cards9.models.boards._
 import com.codelab27.cards9.models.cards._
+import com.codelab27.cards9.models.common.Common.Color
 import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
 import com.codelab27.cards9.models.matches.{Match, MatchSnapshot}
 import com.codelab27.cards9.models.players.Player
@@ -49,15 +50,9 @@ object DefaultFormats {
 
   implicit val playerIdFormat = ValueClassJsonFormat(Player.Id.unapply, Player.Id.apply)
 
-  implicit val redPlayerFormat = Format[RedPlayer](
-    Reads(json => json.validateOpt[Player.Id].map(RedPlayer.apply)),
-    Writes(red => red.id.fold[JsValue](JsNull)(playerIdFormat.writes))
-  )
+  implicit val redPlayerFormat = ValueClassJsonFormat(RedPlayer.unapply, RedPlayer.apply)
 
-  implicit val bluePlayerFormat = Format[BluePlayer](
-    Reads(json => json.validateOpt[Player.Id].map(BluePlayer.apply)),
-    Writes(blue => blue.id.fold[JsValue](JsNull)(playerIdFormat.writes))
-  )
+  implicit val bluePlayerFormat = ValueClassJsonFormat(BluePlayer.unapply, BluePlayer.apply)
 
   implicit val cardIdFormat = ValueClassJsonFormat(Card.Id.unapply, Card.Id.apply)
 

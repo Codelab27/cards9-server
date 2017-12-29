@@ -1,10 +1,11 @@
 package com.codelab27.cards9.game
 
 import com.codelab27.cards9.models.boards.Board._
-import com.codelab27.cards9.models.boards.Color.{Blue, Red}
 import com.codelab27.cards9.models.boards.Square.{Block, Free, Occupied}
 import com.codelab27.cards9.models.boards._
 import com.codelab27.cards9.models.cards.{Arrow, BattleClass, Card, Fight}
+import com.codelab27.cards9.models.common.Common.Color
+import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.{BlueScore, RedScore, Score}
 import com.codelab27.cards9.services.settings.GameSettings
@@ -94,18 +95,18 @@ object GameEngines {
 
       // Occupied card must be part of the hand of the selected player
       require(
-        (board.redPlayer.contains(occupied.card) && player == Red) ||
-          (board.bluePlayer.contains(occupied.card) && player == Blue)
+        (board.redHand.contains(occupied.card) && player == Red) ||
+          (board.blueHand.contains(occupied.card) && player == Blue)
       )
 
       board.grid.update(newCoords.x)(newCoords.y)(occupied)
 
       val (newRed, newBlue) = player match {
-        case Red  => (board.redPlayer - occupied.card, board.bluePlayer)
-        case Blue => (board.redPlayer, board.bluePlayer - occupied.card)
+        case Red  => (board.redHand - occupied.card, board.blueHand)
+        case Blue => (board.redHand, board.blueHand - occupied.card)
       }
 
-      board.copy(grid = board.grid.clone, redPlayer = newRed, bluePlayer = newBlue)
+      board.copy(grid = board.grid.clone, redHand = newRed, blueHand = newBlue)
     }
 
     /**

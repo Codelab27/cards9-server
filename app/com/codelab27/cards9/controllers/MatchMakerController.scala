@@ -1,5 +1,6 @@
 package com.codelab27.cards9.controllers
 
+import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
 import com.codelab27.cards9.models.players.Player
@@ -51,7 +52,7 @@ class MatchMakerController[F[_] : Bimonad](
 
     def createMatchForPlayer(playerId: Player.Id) = {
 
-      val theMatch = Match(RedPlayer(Some(playerId)), BluePlayer(), MatchState.Waiting, None, None)
+      val theMatch = Match(Some(RedPlayer(playerId)), None, MatchState.Waiting, None, None)
 
       OptionT(matchMaker.storeMatch(theMatch))
 
@@ -79,8 +80,8 @@ class MatchMakerController[F[_] : Bimonad](
       } yield {
 
         val matchWithNewPlayer = color match {
-          case _: RedPlayer   => theMatch.copy(red = RedPlayer(Some(playerId)))
-          case _: BluePlayer  => theMatch.copy(blue = BluePlayer(Some(playerId)))
+          case Red  => theMatch.copy(red = Some(RedPlayer(playerId)))
+          case Blue => theMatch.copy(blue = Some(BluePlayer(playerId)))
         }
 
         matchWithNewPlayer.copy(state = MatchState.SettingUp)
@@ -105,16 +106,16 @@ class MatchMakerController[F[_] : Bimonad](
     def removePlayerFromMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
 
       val removedPlayer = for {
-        _     <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
-        color <- Match.isPlayerInMatch(theMatch, playerId)
+        _       <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
+        player  <- Match.isPlayerInMatch(theMatch, playerId)
       } yield {
 
-        val matchWithPlayers = color match {
-          case _: RedPlayer   => theMatch.copy(red = RedPlayer())
-          case _: BluePlayer  => theMatch.copy(blue = BluePlayer())
+        val matchWithPlayers = player match {
+          case _: RedPlayer   => theMatch.copy(red = None)
+          case _: BluePlayer  => theMatch.copy(blue = None)
         }
 
-        if (matchWithPlayers.red.id.isEmpty && matchWithPlayers.blue.id.isEmpty) {
+        if (matchWithPlayers.red.isEmpty && matchWithPlayers.blue.isEmpty) {
           matchWithPlayers.copy(state = MatchState.Aborted)
         } else {
           matchWithPlayers.copy(state = MatchState.Waiting)
