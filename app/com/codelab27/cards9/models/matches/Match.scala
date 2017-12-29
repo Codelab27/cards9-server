@@ -34,21 +34,23 @@ object Match {
 
   case class Score(red: RedScore, blue: BlueScore)
 
+  case class IsReady(value: Boolean) extends AnyVal
+
   sealed trait ColoredPlayer
 
-  case class RedPlayer(id: Player.Id) extends ColoredPlayer
+  case class RedPlayer(id: Player.Id, ready: IsReady) extends ColoredPlayer
 
-  case class BluePlayer(id: Player.Id) extends ColoredPlayer
+  case class BluePlayer(id: Player.Id, ready: IsReady) extends ColoredPlayer
 
   def isPlayerInMatch(theMatch: Match, player: Player.Id): Option[ColoredPlayer] = {
-    val redSlot = for (redPlayer <- theMatch.red if redPlayer.id == player) yield redPlayer
+    val redSlot       = for (redPlayer <- theMatch.red if redPlayer.id == player) yield redPlayer
     lazy val blueSlot = for (bluePlayer <- theMatch.blue if bluePlayer.id == player) yield bluePlayer
 
     redSlot.orElse(blueSlot)
   }
 
   def emptySlot(theMatch: Match): Option[Color] = {
-    val redSlot = for (_ <- Option(theMatch.red.isEmpty).filter(identity)) yield Red
+    val redSlot       = for (_ <- Option(theMatch.red.isEmpty).filter(identity)) yield Red
     lazy val blueSlot = for (_ <- Option(theMatch.blue.isEmpty).filter(identity)) yield Blue
 
     redSlot.orElse(blueSlot)

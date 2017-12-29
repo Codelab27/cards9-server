@@ -50,9 +50,11 @@ object DefaultFormats {
 
   implicit val playerIdFormat = ValueClassJsonFormat(Player.Id.unapply, Player.Id.apply)
 
-  implicit val redPlayerFormat = ValueClassJsonFormat(RedPlayer.unapply, RedPlayer.apply)
+  implicit val playerReadyFormat = ValueClassJsonFormat(Match.IsReady.unapply, Match.IsReady.apply)
 
-  implicit val bluePlayerFormat = ValueClassJsonFormat(BluePlayer.unapply, BluePlayer.apply)
+  implicit val redPlayerFormat = Json.format[RedPlayer]
+
+  implicit val bluePlayerFormat = Json.format[BluePlayer]
 
   implicit val cardIdFormat = ValueClassJsonFormat(Card.Id.unapply, Card.Id.apply)
 

@@ -2,7 +2,7 @@ package com.codelab27.cards9.controllers
 
 import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
 import com.codelab27.cards9.models.matches.Match
-import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
+import com.codelab27.cards9.models.matches.Match.{BluePlayer, IsReady, MatchState, RedPlayer}
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.matchmaking.MatchMaker
 
@@ -52,7 +52,7 @@ class MatchMakerController[F[_] : Bimonad](
 
     def createMatchForPlayer(playerId: Player.Id) = {
 
-      val theMatch = Match(Some(RedPlayer(playerId)), None, MatchState.Waiting, None, None)
+      val theMatch = Match(Some(RedPlayer(playerId, IsReady(false))), None, MatchState.Waiting, None, None)
 
       OptionT(matchMaker.storeMatch(theMatch))
 
@@ -80,8 +80,8 @@ class MatchMakerController[F[_] : Bimonad](
       } yield {
 
         val matchWithNewPlayer = color match {
-          case Red  => theMatch.copy(red = Some(RedPlayer(playerId)))
-          case Blue => theMatch.copy(blue = Some(BluePlayer(playerId)))
+          case Red  => theMatch.copy(red = Some(RedPlayer(playerId, IsReady(false))))
+          case Blue => theMatch.copy(blue = Some(BluePlayer(playerId, IsReady(false))))
         }
 
         matchWithNewPlayer.copy(state = MatchState.SettingUp)
