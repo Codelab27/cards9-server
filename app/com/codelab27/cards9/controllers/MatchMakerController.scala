@@ -2,7 +2,8 @@ package com.codelab27.cards9.controllers
 
 import com.codelab27.cards9.models.common.Common.Color.{Blue, Red}
 import com.codelab27.cards9.models.matches.Match
-import com.codelab27.cards9.models.matches.Match.{BluePlayer, IsReady, MatchState, RedPlayer}
+import com.codelab27.cards9.models.matches.Match.PlayerAction.{Join, Leave, Ready, Start}
+import com.codelab27.cards9.models.matches.Match._
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.services.matchmaking.MatchMaker
 
@@ -12,8 +13,8 @@ import cats.Bimonad
 import cats.arrow.FunctionK
 import cats.data.OptionT
 
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{AbstractController, ControllerComponents, Request}
+import play.api.libs.json.Json
+import play.api.mvc.{AbstractController, ControllerComponents}
 
 import scala.concurrent.Future
 
@@ -30,10 +31,6 @@ class MatchMakerController[F[_] : Bimonad](
   import cats.syntax.comonad._
   import cats.syntax.functor._
 
-  ///////////////////////
-  /// Body readers
-  private def readPlayer(request: Request[JsValue]) = (request.body \ "playerId").validate[Player.Id]
-
   def getMatchesForState(state: MatchState) = Action {
 
     val foundMatches = matchMaker.findMatches(state)
@@ -48,7 +45,7 @@ class MatchMakerController[F[_] : Bimonad](
     matches.filter(m => MatchState.isPlayingOrWaiting(m.state))
   }
 
-  def createMatch() = Action.async(parse.json) { implicit request =>
+  def createMatch(playerId: Player.Id) = Action.async { implicit request =>
 
     def createMatchForPlayer(playerId: Player.Id) = {
 
@@ -59,16 +56,24 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      playerId  <- readPlayer(request)                  ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
       // TODO validate player existence
-      matchId   <- createMatchForPlayer(playerId).step  ?| (_       => Conflict(s"Could not create a match"))
+      matchId <- createMatchForPlayer(playerId).step  ?| (_ => Conflict(s"Could not create a match"))
     } yield {
       Ok(Json.toJson(matchId))
     }
 
   }
 
-  def joinMatch(id: Match.Id) = Action.async(parse.json) { implicit request =>
+  def playerActionOnMatch(id: Match.Id, playerId: Player.Id, action: PlayerAction) = action match {
+
+    case Join   => joinMatch(id, playerId)
+    case Leave  => leaveMatch(id, playerId)
+    case Ready  => ???
+    case Start  => ???
+
+  }
+
+  private def joinMatch(id: Match.Id, playerId: Player.Id) = Action.async { implicit request =>
 
     def addPlayerToMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
 
@@ -91,17 +96,16 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      playerId      <- readPlayer(request)                                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
-      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_       => Conflict(s"Could not add player to match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_       => Conflict(s"Could not update the match"))
+      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_ => Conflict(s"Could not add player to match ${id.value}"))
+      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }
 
   }
 
-  def leaveMatch(id: Match.Id) = Action.async(parse.json) { implicit request =>
+  private def leaveMatch(id: Match.Id, playerId: Player.Id) = Action.async { implicit request =>
 
     def removePlayerFromMatch(playerId: Player.Id, theMatch: Match): OptionT[F, Match] = {
 
@@ -127,10 +131,9 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      playerId      <- readPlayer(request)                                ?| (jserrs  => BadRequest(s"Error parsing player id: ${jserrs.seq}"))
-      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_       => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step     ?| (_       => Conflict(s"Could not remove player from match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_       => Conflict(s"Could not update the match"))
+      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step     ?| (_ => Conflict(s"Could not remove player from match ${id.value}"))
+      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }
