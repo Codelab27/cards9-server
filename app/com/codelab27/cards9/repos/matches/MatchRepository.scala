@@ -1,10 +1,10 @@
-package com.codelab27.cards9.services.matchmaking
+package com.codelab27.cards9.repos.matches
 
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.MatchState
 import com.codelab27.cards9.models.players.Player
 
-trait MatchMaker[F[_]] {
+trait MatchRepository[F[_]] {
 
   def findMatch(id: Match.Id): F[Option[Match]]
 

@@ -1,14 +1,14 @@
-package com.codelab27.cards9.services.matchmaking.mem
+package com.codelab27.cards9.repos.matches.mem
 
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.players.Player
-import com.codelab27.cards9.services.matchmaking.MatchMaker
+import com.codelab27.cards9.repos.matches.MatchRepository
 
 import cats.Id
 
 import scala.collection.concurrent.TrieMap
 
-object MatchMakerInMemoryInterpreter extends MatchMaker[Id] {
+object MatchRepositoryInMemoryInterpreter extends MatchRepository[Id] {
 
   private def generateId = if (matchRepo.isEmpty) {
     Match.Id(1.toString)

@@ -5,7 +5,7 @@ import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.PlayerAction.{Join, Leave, Ready, Start}
 import com.codelab27.cards9.models.matches.Match._
 import com.codelab27.cards9.models.players.Player
-import com.codelab27.cards9.services.matchmaking.MatchMaker
+import com.codelab27.cards9.repos.matches.MatchRepository
 
 import io.kanaka.monadic.dsl._
 
@@ -20,7 +20,7 @@ import scala.concurrent.Future
 
 class MatchMakerController[F[_] : Bimonad](
     cc: ControllerComponents,
-    matchMaker: MatchMaker[F]
+    matchRepo: MatchRepository[F]
 )(implicit fshandler: FunctionK[F, Future]) extends AbstractController(cc) {
 
   implicit val ec = cc.executionContext
@@ -33,14 +33,14 @@ class MatchMakerController[F[_] : Bimonad](
 
   def getMatchesForState(state: MatchState) = Action {
 
-    val foundMatches = matchMaker.findMatches(state)
+    val foundMatches = matchRepo.findMatches(state)
 
     Ok(Json.toJson(foundMatches.extract))
 
   }
 
   private def playingOrWaitingMatches(playerId: Player.Id): F[Seq[Match]] = for {
-    matches <- matchMaker.findMatchesForPlayer(playerId)
+    matches <- matchRepo.findMatchesForPlayer(playerId)
   } yield {
     matches.filter(m => MatchState.isPlayingOrWaiting(m.state))
   }
@@ -51,7 +51,7 @@ class MatchMakerController[F[_] : Bimonad](
 
       val theMatch = Match(Some(RedPlayer(playerId, IsReady(false))), None, MatchState.Waiting, None, None)
 
-      OptionT(matchMaker.storeMatch(theMatch))
+      OptionT(matchRepo.storeMatch(theMatch))
 
     }
 
@@ -96,9 +96,9 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step          ?| (_ => Conflict(s"Could not add player ${playerId.value} to match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
+      theMatch      <- OptionT(matchRepo.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- addPlayerToMatch(playerId, theMatch).step         ?| (_ => Conflict(s"Could not add player ${playerId.value} to match ${id.value}"))
+      _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }
@@ -131,9 +131,9 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step     ?| (_ => Conflict(s"Could not remove player ${playerId.value} from match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
+      theMatch      <- OptionT(matchRepo.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- removePlayerFromMatch(playerId, theMatch).step    ?| (_ => Conflict(s"Could not remove player ${playerId.value} from match ${id.value}"))
+      _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }
@@ -160,9 +160,9 @@ class MatchMakerController[F[_] : Bimonad](
     }
 
     for {
-      theMatch      <- OptionT(matchMaker.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-      updatedMatch  <- switchPlayerReady(playerId, theMatch).step         ?| (_ => Conflict(s"Could not switch player ${playerId.value} ready from match ${id.value}"))
-      _             <- OptionT(matchMaker.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
+      theMatch      <- OptionT(matchRepo.findMatch(id)).step             ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
+      updatedMatch  <- switchPlayerReady(playerId, theMatch).step        ?| (_ => Conflict(s"Could not switch player ${playerId.value} ready from match ${id.value}"))
+      _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step  ?| (_ => Conflict(s"Could not update the match"))
     } yield {
       Ok(Json.toJson(updatedMatch))
     }
