@@ -43,7 +43,7 @@ class ArrowSpec extends ModelSpec {
 
     "arrows are repeated and/or size is greater than MAX_ARROWS" should {
       "return no byte" in {
-        forAll(InvalidArrowsGenerator) { arrows: List[Arrow] =>
+        forAll(invalidArrowsGenerator) { arrows: List[Arrow] =>
           whenever(arrows.distinct.size != arrows.size || arrows.size > Arrow.MAX_ARROWS) {
             Arrow.compress(arrows) shouldEqual None
           }
