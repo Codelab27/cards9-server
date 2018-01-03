@@ -58,9 +58,9 @@ trait MatchEngine {
     * @param playerId player identifier
     * @return red/blue slot, or none
     */
-  def playerInMatch(theMatch: Match, playerId: Player.Id): Option[ColoredPlayer] = {
-    val redSlot       = for (redPlayer <- theMatch.red if redPlayer.id == playerId) yield redPlayer
-    lazy val blueSlot = for (bluePlayer <- theMatch.blue if bluePlayer.id == playerId) yield bluePlayer
+  def playerInMatch(theMatch: Match, playerId: Player.Id): Option[Color] = {
+    val redSlot       = for (redPlayer <- theMatch.red if redPlayer.id == playerId) yield Red
+    lazy val blueSlot = for (bluePlayer <- theMatch.blue if bluePlayer.id == playerId) yield Blue
 
     redSlot.orElse(blueSlot)
   }
@@ -90,6 +90,11 @@ trait MatchEngine {
   }
 
   /**
+    * Fresh match without players, waiting.
+    */
+  val freshMatch: Match = Match(None, None, MatchState.Waiting, None, None)
+
+  /**
     * Creates a new match for the player.
     *
     * @param playerId the player identifier
@@ -100,22 +105,27 @@ trait MatchEngine {
   }
 
   /**
-    * Switchs the readiness of the player on the match.
+    * Switches the readiness of the player on the match.
     *
     * @param theMatch the match to be updated
-    * @param playerId player that switchs his readiness
+    * @param color the player of the color switching its readiness
+    * @param isReady the new readiness of the player
     * @return match updated with the player changed, if possible
     */
-  def switchPlayerReadiness(theMatch: Match, playerId: Player.Id): Option[Match] = {
+  def switchPlayerReadiness(theMatch: Match, color: Color, isReady: IsReady): Option[Match] = {
 
     for {
       _       <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
-      player  <- playerInMatch(theMatch, playerId)
+      player  <- color match {
+        case Red  => theMatch.red
+        case Blue => theMatch.blue
+      }
     } yield {
 
+      // TODO use a lens here
       player match {
-        case redPlayer: RedPlayer   => theMatch.copy(red = Some(redPlayer.copy(ready = IsReady(!redPlayer.ready.value))))
-        case bluePlayer: BluePlayer => theMatch.copy(blue = Some(bluePlayer.copy(ready = IsReady(!bluePlayer.ready.value))))
+        case redPlayer: RedPlayer   => theMatch.copy(red = Some(redPlayer.copy(ready = isReady)))
+        case bluePlayer: BluePlayer => theMatch.copy(blue = Some(bluePlayer.copy(ready = isReady)))
       }
 
     }
@@ -126,19 +136,18 @@ trait MatchEngine {
     * Removes the player from the red/blue slot and transitions to a properly match state.
     *
     * @param theMatch the match to be updated
-    * @param playerId the player identifier
+    * @param color the colored slot to be removed
     * @return match updated with players and state changed, if possible
     */
-  def removePlayerFromMatch(theMatch: Match, playerId: Player.Id): Option[Match] = {
+  def removePlayerFromMatch(theMatch: Match, color: Color): Option[Match] = {
 
     for {
       _       <- Option(theMatch.state == MatchState.SettingUp || theMatch.state == MatchState.Waiting).filter(identity)
-      player  <- playerInMatch(theMatch, playerId)
     } yield {
 
-      val matchWithPlayers = player match {
-        case _: RedPlayer   => theMatch.copy(red = None)
-        case _: BluePlayer  => theMatch.copy(blue = None)
+      val matchWithPlayers = color match {
+        case Red  => theMatch.copy(red = None)
+        case Blue => theMatch.copy(blue = None)
       }
 
       if (matchWithPlayers.red.isEmpty && matchWithPlayers.blue.isEmpty) {
@@ -151,19 +160,19 @@ trait MatchEngine {
   }
 
   /**
-    * Adds the player to the first empty red/blue slot and transitions to a properly match state
+    * Adds the player to the red/blue slot and transitions to a properly match state.
     *
     * @param theMatch the match to where we want to add the player
     * @param playerId the player identifier
     * @return match updated withs players and state changed, if possible
     */
-  def addPlayerToMatch(theMatch: Match, playerId: Player.Id): Option[Match] = {
+  def addPlayerToMatch(theMatch: Match, color: Color, playerId: Player.Id): Option[Match] = {
 
     lazy val alreadyInThisMatch = playerInMatch(theMatch, playerId)
 
     val updatedMatch = for {
-      _     <- Option(theMatch.state == MatchState.Waiting && alreadyInThisMatch.isEmpty).filter(identity)
-      color <- emptySlot(theMatch)
+      _     <- Option(theMatch.state == MatchState.Waiting).filter(identity)
+      _     <- Option(alreadyInThisMatch.forall(_ == color)).filter(identity)
     } yield {
 
       val matchWithNewPlayer = color match {
@@ -171,7 +180,11 @@ trait MatchEngine {
         case Blue => theMatch.copy(blue = Some(BluePlayer(playerId, IsReady(false))))
       }
 
-      matchWithNewPlayer.copy(state = MatchState.SettingUp)
+      if (matchWithNewPlayer.red.isDefined && matchWithNewPlayer.blue.isDefined) {
+        matchWithNewPlayer.copy(state = MatchState.SettingUp)
+      } else {
+        matchWithNewPlayer
+      }
     }
 
     updatedMatch

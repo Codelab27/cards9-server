@@ -2,6 +2,7 @@ package com.codelab27.cards9.routes
 
 import com.codelab27.cards9.binders.Cards9Binders._
 import com.codelab27.cards9.controllers.MatchMakerController
+import com.codelab27.cards9.models.matches.Match.IsReady
 
 import play.api.routing.Router.Routes
 import play.api.routing.SimpleRouter
@@ -12,14 +13,33 @@ class GameRouter[MM[_]](
 ) extends SimpleRouter {
 
   lazy val routes: Routes = {
-    case GET(p"/matches/${matchState(state)}") => {
-      matchMakerController.getMatchesForState(state)
+    // Create a match
+    case POST(p"/matches")                                                                       => {
+      matchMakerController.createMatch()
     }
-    case POST(p"/matches/players/${playerId(id)}") => {
-      matchMakerController.createMatch(id)
+
+    // Match retrieval
+    case GET(p"/matches/${pbeMatchId(id)}")                                                      => {
+        matchMakerController.retrieveMatch(id)
     }
-    case POST(p"/matches/${matchId(id)}/players/${playerId(player)}/${playerAction(action)}") => {
-      matchMakerController.playerActionOnMatch(id, player, action)
+    case GET(p"/matches" & q"state=${state}")                                                    => {
+      matchMakerController.getMatchesForState(pbMatchState.bind("state", state))
+    }
+
+    // Fill the color slot with a player (join) or remove it (leave)
+    case PUT(p"/matches/${pbeMatchId(id)}/${pbeColor(color)}/${pbePlayerId(playerId)}")          => {
+      matchMakerController.addPlayer(id, color, playerId)
+    }
+    case DELETE(p"/matches/${pbeMatchId(id)}/${pbeColor(color)}")                                => {
+      matchMakerController.removePlayer(id, color)
+    }
+
+    // Makes the player in the color slot ready or not ready
+    case PUT(p"/matches/${pbeMatchId(id)}/${pbeColor(color)}/ready")                             => {
+      matchMakerController.setReadiness(id, color, IsReady(true))
+    }
+    case DELETE(p"/matches/${pbeMatchId(id)}/${pbeColor(color)}/ready")                          => {
+      matchMakerController.setReadiness(id, color, IsReady(false))
     }
   }
 

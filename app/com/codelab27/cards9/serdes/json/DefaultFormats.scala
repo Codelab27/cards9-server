@@ -13,8 +13,6 @@ import org.joda.time.DateTime
 
 import play.api.libs.json._
 
-import scala.reflect.ClassTag
-
 object DefaultFormats {
 
   // Helper formatter that goes from a O type value class to the I inner value serialization
@@ -32,12 +30,12 @@ object DefaultFormats {
 
   private def enumFormat[E <: EnumEntry](
       reader: String => Option[E], stringModifier: String => String
-  )(implicit ct: ClassTag[E]): Format[E] = Format[E](
+  )(implicit ev: Enum[E]): Format[E] = Format[E](
     Reads { json =>
       json.validate[JsString].flatMap { jstring =>
         reader(jstring.value) match {
           case Some(instance) => JsSuccess(instance)
-          case None           => JsError(s"Error converting ${jstring.value} to a valid ${ct.getClass.getSimpleName}")
+          case None           => JsError(s"Error converting ${jstring.value} to a valid ${ev.getClass.getSimpleName.stripSuffix("$")}")
         }
       }
     },
@@ -68,7 +66,7 @@ object DefaultFormats {
 
   implicit val boardSettingsFormat = Json.format[BoardSettings]
 
-  implicit val matchStateFormat = enumFormat(MatchState.withNameUppercaseOnlyOption, _.toLowerCase)
+  implicit val matchStateFormat = enumFormat(MatchState.withNameLowercaseOnlyOption, _.toLowerCase)
 
   implicit val arrowFormat = enumFormat(Arrow.withNameUppercaseOnlyOption, _.toUpperCase)
 

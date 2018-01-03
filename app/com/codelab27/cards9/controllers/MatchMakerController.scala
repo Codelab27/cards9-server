@@ -1,8 +1,8 @@
 package com.codelab27.cards9.controllers
 
 import com.codelab27.cards9.game.engines
+import com.codelab27.cards9.models.common.Common.Color
 import com.codelab27.cards9.models.matches.Match
-import com.codelab27.cards9.models.matches.Match.PlayerAction.{Join, Leave, Ready, Start}
 import com.codelab27.cards9.models.matches.Match._
 import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.repos.matches.MatchRepository
@@ -31,41 +31,50 @@ class MatchMakerController[F[_] : Bimonad](
   import cats.syntax.comonad._
   import cats.syntax.functor._
 
-  def getMatchesForState(state: MatchState) = Action {
-
-    val foundMatches = matchRepo.findMatches(state)
-
-    Ok(Json.toJson(foundMatches.extract))
-
-  }
-
   private def playingOrWaitingMatches(playerId: Player.Id): F[Seq[Match]] = for {
     foundMatches <- matchRepo.findMatchesForPlayer(playerId)
   } yield {
     foundMatches.filter(engines.matches.isPlayingOrWaiting)
   }
 
-  def createMatch(playerId: Player.Id) = Action.async { implicit request =>
-
-    val theMatch = engines.matches.createMatchForPlayer(playerId)
+  def createMatch() = Action.async { implicit request =>
 
     for {
-      // TODO validate player existence
-      matchId <- OptionT(matchRepo.storeMatch(theMatch)).step ?| (_ => Conflict(s"Could not create a match"))
+      matchId <- OptionT(matchRepo.storeMatch(engines.matches.freshMatch)).step ?| (_ => Conflict("Could not create a new match"))
     } yield {
       Ok(Json.toJson(matchId))
     }
 
   }
 
-  private def updateMatchWithPlayer(id: Match.Id, playerId: Player.Id)(update: (Match, Player.Id) => Option[Match]) = {
-    Action.async { implicit request =>
+  def retrieveMatch(matchId: Match.Id) = Action.async { implicit request =>
 
-      def performUpdate(theMatch: Match) = OptionT.fromOption(update(theMatch, playerId))
+    for {
+      theMatch <- OptionT(matchRepo.findMatch(matchId)).step ?| (_ => NotFound(s"Could not find match with id ${matchId.value}"))
+    } yield {
+      Ok(Json.toJson(theMatch))
+    }
+
+  }
+
+  def getMatchesForState(stateOrError: Either[String, MatchState]) = Action.async {
+
+    for {
+      state   <- stateOrError ?| (err => BadRequest(err))
+    } yield {
+      val foundMatches = matchRepo.findMatches(state)
+
+      Ok(Json.toJson(foundMatches.extract))
+    }
+
+  }
+
+  private def updateMatch(id: Match.Id)(performUpdate: Match => Option[Match]) = {
+    Action.async { implicit request =>
 
       for {
         theMatch      <- OptionT(matchRepo.findMatch(id)).step            ?| (_ => NotFound(s"Match with identifier ${id.value} not found"))
-        updatedMatch  <- performUpdate(theMatch).step                     ?| (_ => Conflict(s"Could not perform action on player ${playerId.value} of match ${id.value}"))
+        updatedMatch  <- OptionT.fromOption(performUpdate(theMatch)).step ?| (_ => Conflict(s"Could not perform action on match ${id.value}"))
         _             <- OptionT(matchRepo.storeMatch(updatedMatch)).step ?| (_ => Conflict(s"Could not update the match"))
       } yield {
         Ok(Json.toJson(updatedMatch))
@@ -74,17 +83,16 @@ class MatchMakerController[F[_] : Bimonad](
     }
   }
 
-  def playerActionOnMatch(id: Match.Id, playerId: Player.Id, action: PlayerAction) = {
+  def addPlayer(id: Match.Id, color: Color, playerId: Player.Id) = {
+    updateMatch(id)(theMatch => engines.matches.addPlayerToMatch(theMatch, color, playerId))
+  }
 
-    val actionOnMatchAndPlayer = updateMatchWithPlayer(id, playerId) _
+  def removePlayer(id: Match.Id, color: Color) = {
+    updateMatch(id)(theMatch => engines.matches.removePlayerFromMatch(theMatch, color))
+  }
 
-    action match {
-      case Join   => actionOnMatchAndPlayer(engines.matches.addPlayerToMatch)
-      case Leave  => actionOnMatchAndPlayer(engines.matches.removePlayerFromMatch)
-      case Ready  => actionOnMatchAndPlayer(engines.matches.switchPlayerReadiness)
-      case Start  => ???
-    }
-
+  def setReadiness(id: Match.Id, color: Color, isReady: IsReady) = {
+    updateMatch(id)(theMatch => engines.matches.switchPlayerReadiness(theMatch, color, isReady))
   }
 
 }

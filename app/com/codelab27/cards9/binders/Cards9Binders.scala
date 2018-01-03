@@ -1,5 +1,6 @@
 package com.codelab27.cards9.binders
 
+import com.codelab27.cards9.models.common.Common.Color
 import com.codelab27.cards9.models.matches.Match
 import com.codelab27.cards9.models.matches.Match.{MatchState, PlayerAction}
 import com.codelab27.cards9.models.players.Player
@@ -11,21 +12,20 @@ import cats.syntax.either._
 import play.api.mvc.PathBindable
 import play.api.routing.sird.PathBindableExtractor
 
-import scala.reflect.ClassTag
 import scala.util.Try
 
 object Cards9Binders {
 
-  private case class EnumBinder[T <: EnumEntry]()(implicit ev: Enum[T], ct: ClassTag[T]) extends PathBindable[T] {
+  case class EnumPathBindable[T <: EnumEntry]()(implicit ev: Enum[T]) extends PathBindable[T] {
     override def bind(key: String, value: String) = {
       Try(ev.withNameLowercaseOnly(value))
-        .toEither.leftMap(_ => s"Error in url converting $value to ${ct.getClass.getSimpleName}")
+        .toEither.leftMap(_ => s"Error in url converting $value to ${ev.getClass.getSimpleName.stripSuffix("$")}")
     }
 
     override def unbind(key: String, value: T) = value.entryName.toLowerCase
   }
 
-  private case class ValueClassBinder[O, I](
+  case class ValueClassPathBindable[O, I](
       unapply: O => Option[I],
       apply: I => O
   )(implicit primitive: PathBindable[I]) extends PathBindable[O] {
@@ -35,12 +35,14 @@ object Cards9Binders {
     override def unbind(key: String, value: O) = unapply(value).map(primitive.unbind(key, _)).getOrElse("")
   }
 
-  val matchState = new PathBindableExtractor[MatchState]()(EnumBinder[MatchState])
+  val pbMatchState = EnumPathBindable[MatchState]
 
-  val playerAction = new PathBindableExtractor[PlayerAction]()(EnumBinder[PlayerAction])
+  val pbePlayerAction = new PathBindableExtractor[PlayerAction]()(EnumPathBindable[PlayerAction])
 
-  val matchId = new PathBindableExtractor[Match.Id]()(ValueClassBinder(Match.Id.unapply, Match.Id.apply))
+  val pbeMatchId = new PathBindableExtractor[Match.Id]()(ValueClassPathBindable(Match.Id.unapply, Match.Id.apply))
 
-  val playerId = new PathBindableExtractor[Player.Id]()(ValueClassBinder(Player.Id.unapply, Player.Id.apply))
+  val pbePlayerId = new PathBindableExtractor[Player.Id]()(ValueClassPathBindable(Player.Id.unapply, Player.Id.apply))
+
+  val pbeColor = new PathBindableExtractor[Color]()(EnumPathBindable[Color])
 
 }
