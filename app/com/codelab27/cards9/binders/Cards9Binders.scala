@@ -2,7 +2,7 @@ package com.codelab27.cards9.binders
 
 import com.codelab27.cards9.models.common.Common.Color
 import com.codelab27.cards9.models.matches.Match
-import com.codelab27.cards9.models.matches.Match.{MatchState, PlayerAction}
+import com.codelab27.cards9.models.matches.Match.MatchState
 import com.codelab27.cards9.models.players.Player
 
 import enumeratum._
@@ -36,8 +36,6 @@ object Cards9Binders {
   }
 
   val pbMatchState = EnumPathBindable[MatchState]
-
-  val pbePlayerAction = new PathBindableExtractor[PlayerAction]()(EnumPathBindable[PlayerAction])
 
   val pbeMatchId = new PathBindableExtractor[Match.Id]()(ValueClassPathBindable(Match.Id.unapply, Match.Id.apply))
 

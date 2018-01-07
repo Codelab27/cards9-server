@@ -18,6 +18,11 @@ class GameRouter[MM[_]](
       matchMakerController.createMatch()
     }
 
+    // Retrieves a websocket that will broadcast every event into the room
+    case GET(p"/matches/room")                                                                   => {
+      matchMakerController.subscribeRoomEvents
+    }
+
     // Match retrieval
     case GET(p"/matches/${pbeMatchId(id)}")                                                      => {
         matchMakerController.retrieveMatch(id)

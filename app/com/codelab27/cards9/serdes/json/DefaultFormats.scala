@@ -5,7 +5,8 @@ import com.codelab27.cards9.models.boards._
 import com.codelab27.cards9.models.cards._
 import com.codelab27.cards9.models.common.Common.Color
 import com.codelab27.cards9.models.matches.Match.{BluePlayer, MatchState, RedPlayer}
-import com.codelab27.cards9.models.matches.{Match, MatchSnapshot}
+import com.codelab27.cards9.models.matches.MatchRoomEvent._
+import com.codelab27.cards9.models.matches.{Match, MatchRoomEvent, MatchSnapshot}
 import com.codelab27.cards9.models.players.Player
 
 import enumeratum._
@@ -110,6 +111,24 @@ object DefaultFormats {
       case Free         => JsString(Free.toString)
     }
   )
+
+  implicit val matchCreatedWrites = Json.writes[MatchCreated]
+
+  implicit val matchFinishedWrites = Json.writes[MatchFinished]
+
+  implicit val playerJoinedWrites = Json.writes[PlayerJoin]
+
+  implicit val playerLeaveWrites = Json.writes[PlayerLeave]
+
+  implicit val playerIsReady = Json.writes[PlayerIsReady]
+
+  implicit val matchRoomEventWrites = Writes[MatchRoomEvent] {
+    case mc: MatchCreated   => matchCreatedWrites.writes(mc)
+    case mf: MatchFinished  => matchFinishedWrites.writes(mf)
+    case pj: PlayerJoin     => playerJoinedWrites.writes(pj)
+    case pl: PlayerLeave    => playerLeaveWrites.writes(pl)
+    case pr: PlayerIsReady  => playerIsReady.writes(pr)
+  }
 
   implicit val boardFormat = Json.format[Board]
 
