@@ -122,12 +122,18 @@ object DefaultFormats {
 
   implicit val playerIsReady = Json.writes[PlayerIsReady]
 
-  implicit val matchRoomEventWrites = Writes[MatchRoomEvent] {
-    case mc: MatchCreated   => matchCreatedWrites.writes(mc)
-    case mf: MatchFinished  => matchFinishedWrites.writes(mf)
-    case pj: PlayerJoin     => playerJoinedWrites.writes(pj)
-    case pl: PlayerLeave    => playerLeaveWrites.writes(pl)
-    case pr: PlayerIsReady  => playerIsReady.writes(pr)
+  implicit val matchRoomEventWrites = Writes[MatchRoomEvent] { event =>
+    val discriminator = event.discriminator
+
+    val jsonEvent = event match {
+      case mc: MatchCreated  => matchCreatedWrites.writes(mc)
+      case mf: MatchFinished => matchFinishedWrites.writes(mf)
+      case pj: PlayerJoin    => playerJoinedWrites.writes(pj)
+      case pl: PlayerLeave   => playerLeaveWrites.writes(pl)
+      case pr: PlayerIsReady => playerIsReady.writes(pr)
+    }
+
+    jsonEvent + ("discriminator" -> Json.toJson(discriminator))
   }
 
   implicit val boardFormat = Json.format[Board]
