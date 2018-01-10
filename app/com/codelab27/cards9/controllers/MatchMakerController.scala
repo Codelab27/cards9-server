@@ -8,7 +8,7 @@ import com.codelab27.cards9.models.players.Player
 import com.codelab27.cards9.repos.matches.MatchRepository
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, Sink, Source}
 import io.kanaka.monadic.dsl._
 
 import cats.Bimonad
@@ -33,14 +33,14 @@ class MatchMakerController[F[_] : Bimonad](
   import cats.syntax.comonad._
   import cats.syntax.functor._
 
-  val bufferSize = 100
+  val bufferSize = 128
 
   val overflowStrategy = akka.stream.OverflowStrategy.dropHead
 
-  val (roomEventsQueue, roomEventsPub) = Source.queue[MatchRoomEvent](bufferSize, overflowStrategy)
-    .toMat(Sink.asPublisher(true))(Keep.both).run()
+  val (roomEventsQueue, roomEventsSource) = Source.queue[MatchRoomEvent](bufferSize, overflowStrategy)
+    .toMat(BroadcastHub.sink(bufferSize))(Keep.both).run
 
-  val roomEventsFlow = Flow.fromSinkAndSource(Sink.ignore, Source.fromPublisher(roomEventsPub))
+  val roomEventsFlow = Flow.fromSinkAndSource(Sink.ignore, roomEventsSource)
 
   private def playingOrWaitingMatches(playerId: Player.Id): F[Seq[Match]] = for {
     foundMatches <- matchRepo.findMatchesForPlayer(playerId)
