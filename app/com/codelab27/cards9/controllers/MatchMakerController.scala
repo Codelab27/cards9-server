@@ -54,7 +54,7 @@ class MatchMakerController[F[_] : Bimonad](
       matchId <- OptionT(matchRepo.storeMatch(engines.matches.freshMatch)).step ?| (_ => Conflict("Could not create a new match"))
       _       <- roomEventsQueue.offer(MatchRoomEvent.MatchCreated(matchId))    ?| (_ => Conflict(s"Cannot publish event match creation to room"))
     } yield {
-      Ok(Json.toJson(matchId))
+      Created(Json.toJson(matchId))
     }
 
   }

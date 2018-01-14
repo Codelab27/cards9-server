@@ -25,3 +25,6 @@ project/.sbtserver.lock
 
 # Intellij specific
 .idea/
+
+# macOS specific
+.DS_Store

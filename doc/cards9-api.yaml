@@ -1,0 +1,303 @@
+openapi: 3.0.1
+info:
+  version: 0.1.0
+  title: Cards9 Server API
+servers:
+  - url: 'http://localhost:9000'
+paths:
+  /matches:
+    get:
+      tags:
+        - Match
+      description: |
+        Gets `Match` objects for the specified parameter `MatchState`.
+      parameters:
+        - name: state
+          in: query
+          description: state of the matches to be retrieved
+          required: true
+          schema:
+            $ref: '#/components/schemas/MatchState'
+      responses:
+        '200':
+          description: Retrieved the matches for state
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+    post:
+      tags:
+        - Match
+      description: |
+        Creates a new `Match` object.
+      responses:
+        '201':
+          description: Created match
+          content:
+            application/json:
+              schema:
+                type: string
+                description: The identifier `matchId` of the created match
+                example: '1'
+        '409':
+          description: Error during match creation
+  /matches/room:
+    get:
+      tags:
+        - Match
+      description: |
+        Listens to events in the matchroom (!this is a websocket endpoint!)
+      responses:
+        '200':
+          description: Listening to events in the matchroom
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchRoomEvent'
+  '/matches/{matchId}':
+    get:
+      tags:
+        - Match
+      description: |
+        Retrieves the match with the identifier provided
+      parameters:
+        - name: matchId
+          in: path
+          description: identifier of the match to be retrieved
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The match retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Match'
+        '404':
+          description: Not found match
+  '/matches/{matchId}/{color}/{playerId}':
+    put:
+      tags:
+        - Match
+      description: |
+        Fills the color slot with a player
+      parameters:
+        - name: matchId
+          in: path
+          description: identifier of the match to be updated
+          required: true
+          schema:
+            type: string
+        - name: color
+          in: path
+          description: slot to be filled
+          required: true
+          schema:
+            $ref: '#/components/schemas/PlayerColor'
+        - name: playerId
+          in: path
+          description: identifier of the player to added to match
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Match updated with the player filling the color slot
+        '404':
+          description: Not found match
+        '409':
+          description: Conflict while filling color slot
+  '/matches/{matchId}/{color}':
+    delete:
+      tags:
+        - Match
+      description: |
+        Removes the color slot of the match
+      parameters:
+        - name: matchId
+          in: path
+          description: identifier of the match to be updated
+          required: true
+          schema:
+            type: string
+        - name: color
+          in: path
+          description: slot to be removed
+          required: true
+          schema:
+            $ref: '#/components/schemas/PlayerColor'
+      responses:
+        '200':
+          description: Match updated with the player removed from color slot
+        '404':
+          description: Not found match
+        '409':
+          description: Conflict while removing the color slot
+  '/matches/{matchId}/{color}/ready':
+    put:
+      tags:
+        - Match
+      description: |
+        Makes the player in the `color` slot ready
+      parameters:
+        - name: matchId
+          in: path
+          description: identifier of the match to be updated
+          required: true
+          schema:
+            type: string
+        - name: color
+          in: path
+          description: slot to be updated
+          required: true
+          schema:
+            $ref: '#/components/schemas/PlayerColor'
+      responses:
+        '200':
+          description: Match updated with the player filling the color slot ready
+        '404':
+          description: Not found match
+        '409':
+          description: Conflict while readying the color slot
+    delete:
+      tags:
+        - Match
+      description: |
+        Makes the player in the `color` slot unready
+      parameters:
+        - name: matchId
+          in: path
+          description: identifier of the match to be updated
+          required: true
+          schema:
+            type: string
+        - name: color
+          in: path
+          description: slot to be updated
+          required: true
+          schema:
+            $ref: '#/components/schemas/PlayerColor'
+      responses:
+        '200':
+          description: Match updated with the player filling the color slot unready
+        '404':
+          description: Not found match
+        '409':
+          description: Conflict while unreadying the color slot
+components:
+  schemas:
+    PlayerColor:
+      type: string
+      description: Color of the match slot
+      enum:
+        - red
+        - blue
+    MatchState:
+      type: string
+      description: State of the match
+      enum:
+        - waiting
+        - settingup
+        - starting
+        - ongoing
+        - paused
+        - aborted
+        - finished
+    MatchPlayer:
+      type: object
+      description: A player for one of the match slots
+      properties:
+        id:
+          type: integer
+          description: Player identifier
+        ready:
+          type: boolean
+          description: Whether the player is ready or not to start the match
+      required:
+        - id
+        - ready
+    Match:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the match
+        red:
+          $ref: '#/components/schemas/MatchPlayer'
+        blue:
+          $ref: '#/components/schemas/MatchPlayer'
+        state:
+          $ref: '#/components/schemas/MatchState'
+        snapshot:
+          type: string
+          description: TODO
+          example: TODO
+      required:
+        - id
+        - state
+    MatchCreatedOrFinished:
+      type: object
+      properties:
+        matchId:
+          type: string
+          description: Unique identifier of the match
+      required:
+        - matchId
+    PlayerJoined:
+      type: object
+      properties:
+        matchId:
+          type: string
+          description: Unique identifier of the match
+        color:
+          $ref: '#/components/schemas/PlayerColor'
+        playerId:
+          type: integer
+          description: Identifier of the player
+      required:
+        - matchId
+        - color
+        - playerId
+    PlayerReadyUnready:
+      type: object
+      properties:
+        matchId:
+          type: string
+          description: Unique identifier of the match
+        color:
+          $ref: '#/components/schemas/PlayerColor'
+        isReady:
+          type: boolean
+          description: Whether the player is ready or not
+      required:
+        - matchId
+        - color
+        - isReady
+    PlayerLeft:
+      type: object
+      properties:
+        matchId:
+          type: string
+          description: Unique identifier of the match
+        color:
+          $ref: '#/components/schemas/PlayerColor'
+      required:
+        - matchId
+        - color
+    MatchRoomEvent:
+      oneOf:
+        - $ref: '#/components/schemas/MatchCreatedOrFinished'
+        - $ref: '#/components/schemas/PlayerJoined'
+        - $ref: '#/components/schemas/PlayerReadyUnready'
+        - $ref: '#/components/schemas/PlayerLeft'
+      discriminator:
+        propertyName: discriminator
+        mapping:
+          created: '#/components/schemas/MatchCreatedOrFinished'
+          finished: '#/components/schemas/MatchCreatedOrFinished'
+          join: '#/components/schemas/PlayerJoined'
+          leave: '#/components/schemas/PlayerLeft'
+          ready: '#/components/schemas/PlayerReadyUnready'
